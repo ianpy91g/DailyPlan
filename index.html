@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>智慧規劃表 - 懸停顯示全名版</title>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
 
-<!-- ✅ 新增：匯出圖片用 -->
+<!-- ✅ 匯出圖片用（整張時間表） -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
@@ -18,7 +19,7 @@
         --delete-color: #e74c3c;
         --bg-color: #f4f6f8;
         --border-color: #ddd;
-        --slot-height: 50px; 
+        --slot-height: 50px;
     }
 
     body {
@@ -33,7 +34,7 @@
         display: flex; gap: 10px; align-items: center; flex-wrap: wrap; z-index: 100;
     }
     #project-bar input, #project-bar select { padding: 5px; border-radius: 4px; border: none; }
-    
+
     #settings-bar {
         background: #fff; padding: 10px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -41,7 +42,7 @@
         align-items: center; z-index: 10; font-size: 13px;
         border-bottom: 1px solid var(--border-color);
     }
-    
+
     .setting-group { display: flex; align-items: center; gap: 3px; }
     input[type="number"], input[type="date"] { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
     input[type="number"] { width: 50px; }
@@ -61,18 +62,22 @@
         display: flex; flex-direction: column; padding: 10px; z-index: 5;
     }
 
-    .sidebar-title { font-size: 14px; font-weight: bold; color: #555; border-left: 4px solid var(--primary-color); padding-left: 8px; margin-bottom: 10px; }
+    .sidebar-title {
+        font-size: 14px; font-weight: bold; color: #555;
+        border-left: 4px solid var(--primary-color);
+        padding-left: 8px; margin-bottom: 10px;
+    }
 
-    #task-pool { 
-        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; 
+    #task-pool {
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
         padding: 8px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;
     }
     #task-pool .task-card { height: var(--slot-height); flex-shrink: 0; }
 
     #calendar-area { flex: 1; overflow: auto; padding: 10px; background: white; }
-    #calendar-grid { 
-        display: grid; 
-        border-top: 1px solid var(--border-color); 
+    #calendar-grid {
+        display: grid;
+        border-top: 1px solid var(--border-color);
         border-left: 1px solid var(--border-color);
         margin-top: 10px;
     }
@@ -85,12 +90,12 @@
         display: flex; align-items: center; overflow: hidden; font-weight: 500;
         box-sizing: border-box;
     }
-    
-    .task-text { 
-        padding: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+
+    .task-text {
+        padding: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         cursor: inherit; border-radius: 2px;
     }
-    
+
     .task-text[contenteditable="true"] {
         background: white; cursor: text; outline: 2px solid var(--primary-color);
         white-space: normal; overflow: visible;
@@ -104,7 +109,8 @@
     .task-card:hover .delete-btn { display: block; }
 
     .color-dot {
-        width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2);
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 1px solid rgba(0,0,0,0.2);
         margin: 0 4px; position: relative; overflow: hidden; flex-shrink: 0;
     }
     .color-dot input[type="color"] {
@@ -114,17 +120,20 @@
     .grid-header-day, .grid-header-sub, .time-label, .grid-cell {
         border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
     }
-    .grid-header-day { 
-        background: #eee; font-weight: bold; text-align: center; padding: 8px 5px; 
+    .grid-header-day {
+        background: #eee; font-weight: bold; text-align: center; padding: 8px 5px;
         position: sticky; top: 0; z-index: 10; font-size: 12px;
     }
-    .grid-header-sub { background: #f9f9f9; font-size: 10px; text-align: center; color: #999; position: sticky; top: 46px; z-index: 9; }
-    
-    .time-label { 
-        background: #f9f9f9; font-size: 11px; color: #333; 
-        text-align: right; padding-right: 8px; 
-        position: sticky; left: 0; z-index: 8; 
-        height: var(--slot-height); 
+    .grid-header-sub {
+        background: #f9f9f9; font-size: 10px; text-align: center; color: #999;
+        position: sticky; top: 46px; z-index: 9;
+    }
+
+    .time-label {
+        background: #f9f9f9; font-size: 11px; color: #333;
+        text-align: right; padding-right: 8px;
+        position: sticky; left: 0; z-index: 8;
+        height: var(--slot-height);
         display: flex; align-items: flex-start;
         justify-content: flex-end;
     }
@@ -132,11 +141,10 @@
 
     .grid-cell { height: var(--slot-height); background: #fff; position: relative; padding: 1px; box-sizing: border-box; }
     .grid-cell.drag-over { background-color: #e3f2fd; }
-
 </style>
 </head>
-<body>
 
+<body>
 <div id="project-bar">
     <span>專案:</span>
     <select id="project-selector" onchange="switchProject()"></select>
@@ -145,7 +153,7 @@
     <button class="btn btn-orange" onclick="exportData()">導出 JSON</button>
     <button class="btn btn-orange" onclick="importData()">導入 JSON</button>
 
-    <!-- ✅ 新增：匯出圖片 -->
+    <!-- ✅ 匯出整張時間表成 PNG -->
     <button class="btn btn-orange" onclick="exportScheduleImage()">匯出圖片</button>
 
     <button class="btn btn-red" onclick="deleteProject()">刪除</button>
@@ -165,7 +173,8 @@
     <div id="sidebar">
         <div class="sidebar-title">事項池 (支援空白批次)</div>
         <div id="task-creator" style="display:flex; gap:2px; margin-bottom:10px;">
-            <input type="text" id="new-task-name" placeholder="事項名稱" style="flex:1; border:1px solid #ccc; padding:5px; border-radius:4px; font-size:12px;">
+            <input type="text" id="new-task-name" placeholder="事項名稱"
+                   style="flex:1; border:1px solid #ccc; padding:5px; border-radius:4px; font-size:12px;">
             <button class="btn btn-blue" onclick="addNewTaskManual()">增加</button>
         </div>
         <div id="task-pool"></div>
@@ -174,13 +183,17 @@
 </div>
 
 <script>
+    // ✅ mobile drag-drop polyfill
     MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
-    
+
+    // ✅ 某些 iOS Safari 版本需要（讓拖曳行為更穩）
+    window.addEventListener('touchmove', function () {}, { passive: false });
+
     let draggedItem = null;
     let sourceContainerId = null;
     let isCopyMode = false;
     let currentProjectName = "預設專案";
-    let activeSchedule = {}; 
+    let activeSchedule = {};
     const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
     let colorCounter = 0;
 
@@ -251,10 +264,12 @@
         captureCurrentGrid();
         const nameInput = document.getElementById('new-project-name').value.trim();
         if (nameInput) currentProjectName = nameInput;
+
         const poolItems = Array.from(document.querySelectorAll('#task-pool .task-card')).map(card => ({
             name: card.querySelector('.task-text').innerText,
             color: card.style.backgroundColor
         }));
+
         const projectData = {
             settings: {
                 date: document.getElementById('start-date').value,
@@ -264,9 +279,10 @@
                 days: document.getElementById('days-count').value,
                 cols: document.getElementById('cols-per-day').value
             },
-            schedule: activeSchedule, 
+            schedule: activeSchedule,
             pool: poolItems
         };
+
         localStorage.setItem('planner_v8_' + currentProjectName, JSON.stringify(projectData));
         let projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         if (!projectList.includes(currentProjectName)) projectList.push(currentProjectName);
@@ -289,6 +305,7 @@
             document.getElementById('days-count').value = data.settings.days;
             document.getElementById('cols-per-day').value = data.settings.cols;
             activeSchedule = data.schedule || {};
+
             const pool = document.getElementById('task-pool');
             pool.innerHTML = "";
             (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
@@ -296,14 +313,13 @@
         }
     }
 
-    // --- 修改：增加懸停顯示完整名稱 (title 屬性) ---
     function createTaskElement(name, color) {
         const div = document.createElement('div');
         div.className = 'task-card';
         div.draggable = true;
         div.style.backgroundColor = color;
-        div.title = name; 
-        
+        div.title = name;
+
         const dot = document.createElement('div');
         dot.className = 'color-dot';
         const ci = document.createElement('input');
@@ -314,11 +330,11 @@
         div.appendChild(dot);
 
         const text = document.createElement('span');
-        text.className = 'task-text'; 
+        text.className = 'task-text';
         text.innerText = name;
         text.contentEditable = "false";
 
-        text.ondblclick = (e) => {
+        text.ondblclick = () => {
             text.contentEditable = "true";
             div.draggable = false;
             text.focus();
@@ -333,7 +349,7 @@
             text.contentEditable = "false";
             div.draggable = true;
             div.title = text.innerText;
-            captureCurrentGrid(); 
+            captureCurrentGrid();
         };
 
         text.onkeydown = (e) => {
@@ -344,19 +360,24 @@
 
         const del = document.createElement('span');
         del.className = 'delete-btn'; del.innerHTML = '×';
-        del.onclick = (e) => { 
-            e.stopPropagation(); 
+        del.onclick = (e) => {
+            e.stopPropagation();
             const parentCell = div.closest('.grid-cell');
             if (parentCell) delete activeSchedule[parentCell.dataset.pos];
-            div.remove(); 
+            div.remove();
         };
         div.appendChild(del);
 
         div.addEventListener('dragstart', (e) => {
             draggedItem = div;
             sourceContainerId = div.parentElement.id;
+
+            // ✅ 關鍵：手機/不同瀏覽器更穩（尤其 polyfill）
+            try { e.dataTransfer.setData('text/plain', '1'); } catch (_) {}
+
             if (!isCopyMode) div.style.opacity = '0.4';
         });
+
         div.addEventListener('dragend', () => { div.style.opacity = '1'; draggedItem = null; });
         return div;
     }
@@ -377,42 +398,57 @@
         const interval = parseInt(document.getElementById('interval').value) || 60;
         const days = parseInt(document.getElementById('days-count').value);
         const colsPerDay = parseInt(document.getElementById('cols-per-day').value);
+
         const grid = document.getElementById('calendar-grid');
         grid.innerHTML = '';
         grid.style.gridTemplateColumns = `65px repeat(${days * colsPerDay}, minmax(80px, 1fr))`;
+
         const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         const baseDate = new Date(startDateVal);
+
         grid.appendChild(createHeaderCell(''));
-        for(let i=0; i<days; i++){
+        for (let i = 0; i < days; i++) {
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() + i);
             const head = createHeaderCell(`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`, `span ${colsPerDay}`);
             grid.appendChild(head);
         }
+
         grid.appendChild(createHeaderCell(''));
-        for(let i=0; i<days * colsPerDay; i++) {
+        for (let i = 0; i < days * colsPerDay; i++) {
             const sub = document.createElement('div');
             sub.className = 'grid-header-sub'; sub.innerText = (i % colsPerDay) + 1;
             grid.appendChild(sub);
         }
+
         const totalMinutes = (endH - startH) * 60;
         for (let m = 0; m <= totalMinutes; m += interval) {
             const currentH = startH + Math.floor(m / 60);
-            if (currentH >= endH && m % 60 !== 0) break; 
+            if (currentH >= endH && m % 60 !== 0) break;
+
             const timeStr = `${currentH.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
             const label = document.createElement('div'); label.className = 'time-label';
             label.innerHTML = `<span class="time-text">${timeStr}</span>`;
             grid.appendChild(label);
+
             for (let d = 0; d < days; d++) {
                 const targetDate = new Date(baseDate); targetDate.setDate(baseDate.getDate() + d);
                 const dateKey = targetDate.toISOString().split('T')[0];
+
                 for (let c = 0; c < colsPerDay; c++) {
                     const cell = document.createElement('div');
-                    cell.className = 'grid-cell'; cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
-                    cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+                    cell.className = 'grid-cell';
+                    cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
+
+                    // ✅ 手機拖放必備：dragenter + preventDefault()
+                    cell.ondragenter = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+                    cell.ondragover  = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
                     cell.ondragleave = () => cell.classList.remove('drag-over');
                     cell.ondrop = (e) => handleDrop(e, cell);
-                    if (activeSchedule[cell.dataset.pos]) cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
+
+                    if (activeSchedule[cell.dataset.pos]) {
+                        cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
+                    }
                     grid.appendChild(cell);
                 }
             }
@@ -420,18 +456,28 @@
     }
 
     function handleDrop(e, cell) {
-        e.preventDefault(); cell.classList.remove('drag-over');
+        e.preventDefault();
+        cell.classList.remove('drag-over');
         if (!draggedItem) return;
+
         const name = draggedItem.querySelector('.task-text').innerText;
         const color = draggedItem.style.backgroundColor;
+
         activeSchedule[cell.dataset.pos] = { name, color };
-        const newItem = (sourceContainerId === 'task-pool' || isCopyMode) ? createTaskElement(name, color) : draggedItem;
-        cell.innerHTML = ''; cell.appendChild(newItem);
+
+        const newItem = (sourceContainerId === 'task-pool' || isCopyMode)
+            ? createTaskElement(name, color)
+            : draggedItem;
+
+        cell.innerHTML = '';
+        cell.appendChild(newItem);
     }
 
     function createHeaderCell(html, gridColumn = '') {
-        const div = document.createElement('div'); div.className = 'grid-header-day';
-        div.innerHTML = html; if (gridColumn) div.style.gridColumn = gridColumn;
+        const div = document.createElement('div');
+        div.className = 'grid-header-day';
+        div.innerHTML = html;
+        if (gridColumn) div.style.gridColumn = gridColumn;
         return div;
     }
 
@@ -451,7 +497,7 @@
         localStorage.removeItem('planner_v8_' + currentProjectName);
         let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
-        location.reload(); 
+        location.reload();
     }
 
     function rgbToHex(rgb) {
@@ -460,59 +506,48 @@
         return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
     }
 
-    <!-- ✅ 新增：匯出時間表成 PNG 圖檔 -->
+    // ✅ 匯出「整張」時間表成單張 PNG（不只可視區）
     function exportScheduleImage() {
-    // 先同步資料，避免畫面與 activeSchedule 不一致
-    captureCurrentGrid();
+        captureCurrentGrid();
 
-    // 若有人正在編輯文字，先結束編輯避免截圖怪異
-    const editing = document.querySelector('.task-text[contenteditable="true"]');
-    if (editing) editing.blur();
+        const editing = document.querySelector('.task-text[contenteditable="true"]');
+        if (editing) editing.blur();
 
-    // ✅ 重點：截整張表格本體（包含所有欄列）
-    const grid = document.getElementById('calendar-grid');
-    if (!grid) return alert('找不到 calendar-grid');
+        const grid = document.getElementById('calendar-grid');
+        if (!grid) return alert('找不到 calendar-grid');
 
-    // 計算整張表格的實際尺寸（包含超出可視區的部分）
-    const exportWidth = grid.scrollWidth;
-    const exportHeight = grid.scrollHeight;
+        const exportWidth = grid.scrollWidth;
+        const exportHeight = grid.scrollHeight;
 
-    html2canvas(grid, {
-        backgroundColor: '#ffffff',
-        scale: 2,                 // 解析度（可改 3 更清楚，但檔案會更大）
-        useCORS: true,
-
-        // ✅ 關鍵：強制用完整尺寸截圖
-        width: exportWidth,
-        height: exportHeight,
-        windowWidth: exportWidth,
-        windowHeight: exportHeight,
-
-        // ✅ 關鍵：避免受當前捲動位置影響
-        scrollX: 0,
-        scrollY: 0
-    }).then(canvas => {
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
-
-        link.download = `${name}_${date}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    }).catch(err => {
-        console.error(err);
-        alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
-    });
-}
-
+        html2canvas(grid, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            width: exportWidth,
+            height: exportHeight,
+            windowWidth: exportWidth,
+            windowHeight: exportHeight,
+            scrollX: 0,
+            scrollY: 0
+        }).then(canvas => {
+            const link = document.createElement('a');
+            const date = new Date().toISOString().split('T')[0];
+            const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
+            link.download = `${name}_${date}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
+        });
+    }
 
     window.onload = () => {
         updateProjectSelector();
         const last = localStorage.getItem('planner_last_active');
-        if (last) { currentProjectName = last; switchProject(); } else { generateGrid(); }
+        if (last) { currentProjectName = last; switchProject(); }
+        else { generateGrid(); }
     };
 </script>
-
 </body>
 </html>
-
