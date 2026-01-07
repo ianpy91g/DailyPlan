@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>智慧規劃表</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
@@ -12,195 +12,143 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
-  :root {
-    --primary-color: #4a90e2;
-    --save-color: #2ecc71;
-    --delete-color: #e74c3c;
-    --bg-color: #f4f6f8;
-    --border-color: #ddd;
-    --slot-height: 50px;
-  }
+    :root {
+        --primary-color: #4a90e2;
+        --save-color: #2ecc71;
+        --delete-color: #e74c3c;
+        --bg-color: #f4f6f8;
+        --border-color: #ddd;
+        --slot-height: 50px;
+    }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    margin: 0; padding: 0; height: 100vh;
-    display: flex; flex-direction: column;
-    background-color: var(--bg-color); overflow: hidden;
-  }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0; padding: 0; height: 100vh;
+        display: flex; flex-direction: column;
+        background-color: var(--bg-color); overflow: hidden;
+    }
 
-  #project-bar {
-    background: #333; color: white; padding: 8px 12px;
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; z-index: 100;
-  }
-  #project-bar input, #project-bar select { padding: 5px; border-radius: 4px; border: none; }
+    #project-bar {
+        background: #333; color: white; padding: 8px 12px;
+        display: flex; gap: 10px; align-items: center; flex-wrap: wrap; z-index: 100;
+    }
+    #project-bar input, #project-bar select { padding: 5px; border-radius: 4px; border: none; }
 
-  #settings-bar {
-    background: #fff; padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    display: flex; gap: 8px; flex-wrap: wrap;
-    align-items: center; z-index: 10; font-size: 13px;
-    border-bottom: 1px solid var(--border-color);
-  }
+    #settings-bar {
+        background: #fff; padding: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        display: flex; gap: 8px; flex-wrap: wrap;
+        align-items: center; z-index: 10; font-size: 13px;
+        border-bottom: 1px solid var(--border-color);
+    }
 
-  .setting-group { display: flex; align-items: center; gap: 3px; }
-  input[type="number"], input[type="date"], select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
-  input[type="number"] { width: 60px; }
+    .setting-group { display: flex; align-items: center; gap: 3px; }
+    input[type="number"], input[type="date"], select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
+    input[type="number"] { width: 60px; }
 
-  button.btn {
-    border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;
-  }
-  .btn-blue { background-color: var(--primary-color); }
-  .btn-green { background-color: var(--save-color); }
-  .btn-red { background-color: var(--delete-color); }
-  .btn-orange { background-color: #f39c12; }
+    button.btn {
+        border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;
+    }
+    .btn-blue { background-color: var(--primary-color); }
+    .btn-green { background-color: var(--save-color); }
+    .btn-red { background-color: var(--delete-color); }
+    .btn-orange { background-color: #f39c12; }
 
-  #main-container { display: flex; flex: 1; overflow: hidden; }
+    #main-container { display: flex; flex: 1; overflow: hidden; }
 
-  #sidebar {
-    width: 250px; background: #fff; border-right: 1px solid var(--border-color);
-    display: flex; flex-direction: column; padding: 10px; z-index: 5;
-  }
+    #sidebar {
+        width: 250px; background: #fff; border-right: 1px solid var(--border-color);
+        display: flex; flex-direction: column; padding: 10px; z-index: 5;
+    }
 
-  .sidebar-title {
-    font-size: 14px; font-weight: bold; color: #555;
-    border-left: 4px solid var(--primary-color);
-    padding-left: 8px; margin-bottom: 10px;
-  }
+    .sidebar-title {
+        font-size: 14px; font-weight: bold; color: #555;
+        border-left: 4px solid var(--primary-color);
+        padding-left: 8px; margin-bottom: 10px;
+    }
 
-  #task-pool {
-    flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-    padding: 8px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;
-  }
-  #task-pool .task-card { height: var(--slot-height); flex-shrink: 0; }
+    #task-pool {
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+        padding: 8px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;
+    }
+    #task-pool .task-card { height: var(--slot-height); flex-shrink: 0; }
 
-  #calendar-area { flex: 1; overflow: auto; padding: 10px; background: white; }
+    #calendar-area { flex: 1; overflow: auto; padding: 10px; background: white; }
 
-  #calendar-grid {
-    display: grid;
-    border-top: 1px solid var(--border-color);
-    border-left: 1px solid var(--border-color);
-    margin-top: 10px;
+    #calendar-grid {
+        display: grid;
+        border-top: 1px solid var(--border-color);
+        border-left: 1px solid var(--border-color);
+        margin-top: 10px;
 
-    /* ✅ 符合版面縮放時，以左上角為基準 */
-    transform-origin: top left;
-  }
+        /* ✅ 符合版面縮放時，以左上角為基準 */
+        transform-origin: top left;
+    }
 
-  .task-card {
-    width: 100%; height: 100%; border-radius: 3px;
-    color: #000; font-size: 12px; cursor: grab;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    user-select: none; position: relative; touch-action: none;
-    display: flex; align-items: center; overflow: hidden; font-weight: 500;
-    box-sizing: border-box;
-  }
+    .task-card {
+        width: 100%; height: 100%; border-radius: 3px;
+        color: #000; font-size: 12px; cursor: grab;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        user-select: none; position: relative; touch-action: none;
+        display: flex; align-items: center; overflow: hidden; font-weight: 500;
+        box-sizing: border-box;
+    }
 
-  .task-text {
-    padding: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    cursor: inherit; border-radius: 2px;
-  }
+    .task-text {
+        padding: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        cursor: inherit; border-radius: 2px;
+    }
 
-  .task-text[contenteditable="true"] {
-    background: white; cursor: text; outline: 2px solid var(--primary-color);
-    white-space: normal; overflow: visible;
-  }
+    .task-text[contenteditable="true"] {
+        background: white; cursor: text; outline: 2px solid var(--primary-color);
+        white-space: normal; overflow: visible;
+    }
 
-  .delete-btn {
-    position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.1);
-    color: #000; width: 16px; height: 16px; font-size: 12px;
-    text-align: center; cursor: pointer; display: none;
-  }
-  .task-card:hover .delete-btn { display: block; }
+    .delete-btn {
+        position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.1);
+        color: #000; width: 16px; height: 16px; font-size: 12px;
+        text-align: center; cursor: pointer; display: none;
+    }
+    .task-card:hover .delete-btn { display: block; }
 
-  .color-dot {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 1px solid rgba(0,0,0,0.2);
-    margin: 0 4px; position: relative; overflow: hidden; flex-shrink: 0;
-  }
-  .color-dot input[type="color"] {
-    position: absolute; top: -5px; left: -5px; width: 25px; height: 25px; opacity: 0; cursor: pointer;
-  }
+    .color-dot {
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 1px solid rgba(0,0,0,0.2);
+        margin: 0 4px; position: relative; overflow: hidden; flex-shrink: 0;
+    }
+    .color-dot input[type="color"] {
+        position: absolute; top: -5px; left: -5px; width: 25px; height: 25px; opacity: 0; cursor: pointer;
+    }
 
-  .grid-header-day, .grid-header-sub, .time-label, .grid-cell {
-    border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-  }
-  .grid-header-day {
-    background: #eee; font-weight: bold; text-align: center; padding: 8px 5px;
-    position: sticky; top: 0; z-index: 10; font-size: 12px;
-  }
-  .grid-header-sub {
-    background: #f9f9f9; font-size: 10px; text-align: center; color: #999;
-    position: sticky; top: 46px; z-index: 9;
-  }
+    .grid-header-day, .grid-header-sub, .time-label, .grid-cell {
+        border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+    }
+    .grid-header-day {
+        background: #eee; font-weight: bold; text-align: center; padding: 8px 5px;
+        position: sticky; top: 0; z-index: 10; font-size: 12px;
+    }
+    .grid-header-sub {
+        background: #f9f9f9; font-size: 10px; text-align: center; color: #999;
+        position: sticky; top: 46px; z-index: 9;
+    }
 
-  .time-label {
-    background: #f9f9f9; font-size: 11px; color: #333;
-    text-align: right; padding-right: 8px;
-    position: sticky; left: 0; z-index: 8;
-    height: var(--slot-height);
-    display: flex; align-items: flex-start;
-    justify-content: flex-end;
-  }
-  .time-text { transform: translateY(-50%); background: #f9f9f9; padding: 0 2px; }
+    .time-label {
+        background: #f9f9f9; font-size: 11px; color: #333;
+        text-align: right; padding-right: 8px;
+        position: sticky; left: 0; z-index: 8;
+        height: var(--slot-height);
+        display: flex; align-items: flex-start;
+        justify-content: flex-end;
+    }
+    .time-text { transform: translateY(-50%); background: #f9f9f9; padding: 0 2px; }
 
-  .grid-cell { height: var(--slot-height); background: #fff; position: relative; padding: 1px; box-sizing: border-box; }
-  .grid-cell.drag-over { background-color: #e3f2fd; }
-
-  /* =======================
-     ✅ Icon (emoji) + panel
-     ======================= */
-  .task-icon{
-    width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 4px 0 2px;
-    flex-shrink: 0;
-    font-size: 14px;
-    line-height: 1;
-    opacity: 0.95;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .icon-panel{
-    position: fixed;
-    z-index: 9999;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,0.15);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-    border-radius: 10px;
-    padding: 8px;
-    display: grid;
-    grid-template-columns: repeat(6, 32px);
-    gap: 6px;
-  }
-
-  .icon-panel button{
-    width: 32px;
-    height: 32px;
-    border: 1px solid rgba(0,0,0,0.08);
-    background: #fafafa;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-  }
-
-  .icon-panel button:hover{
-    background: #f0f0f0;
-  }
-
-  .icon-panel .icon-clear{
-    grid-column: span 6;
-    height: 30px;
-    font-size: 12px;
-  }
+    .grid-cell { height: var(--slot-height); background: #fff; position: relative; padding: 1px; box-sizing: border-box; }
+    .grid-cell.drag-over { background-color: #e3f2fd; }
 </style>
 </head>
 
 <body>
-  <div id="project-bar">
+<div id="project-bar">
     <select id="project-selector" onchange="switchProject()"></select>
     <input type="text" id="new-project-name" placeholder="新名稱">
     <button class="btn btn-green" onclick="saveProject()">儲存規畫</button>
@@ -209,34 +157,34 @@
     <button class="btn btn-orange" onclick="exportScheduleImage()">匯出圖片</button>
     <button class="btn btn-red" onclick="deleteProject()">刪除</button>
     <input type="file" id="import-file" style="display:none" onchange="handleFileImport(event)">
-  </div>
+</div>
 
-  <div id="settings-bar">
+<div id="settings-bar">
     <div class="setting-group"><label>起始:</label><input type="date" id="start-date"></div>
 
     <div class="setting-group">
-      <label>時段:</label>
-      <select id="start-time"></select>
-      -
-      <select id="end-time"></select>
+        <label>時段:</label>
+        <select id="start-time"></select>
+        -
+        <select id="end-time"></select>
     </div>
 
     <div class="setting-group">
-      <label>間隔(分):</label>
-      <select id="interval-select"></select>
-      <input id="interval-custom" type="number" min="1" style="display:none;">
+        <label>間隔(分):</label>
+        <select id="interval-select"></select>
+        <input id="interval-custom" type="number" min="1" style="display:none;">
     </div>
 
     <div class="setting-group">
-      <label>天數:</label>
-      <select id="days-select"></select>
-      <input id="days-custom" type="number" min="1" style="display:none;">
+        <label>天數:</label>
+        <select id="days-select"></select>
+        <input id="days-custom" type="number" min="1" style="display:none;">
     </div>
 
     <div class="setting-group">
-      <label>欄位:</label>
-      <select id="cols-select"></select>
-      <input id="cols-custom" type="number" min="1" style="display:none;">
+        <label>欄位:</label>
+        <select id="cols-select"></select>
+        <input id="cols-custom" type="number" min="1" style="display:none;">
     </div>
 
     <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
@@ -248,861 +196,733 @@
     <input type="hidden" id="interval" value="60">
     <input type="hidden" id="days-count" value="7">
     <input type="hidden" id="cols-per-day" value="2">
-  </div>
+</div>
 
-  <div id="main-container">
+<div id="main-container">
     <div id="sidebar">
-      <div class="sidebar-title">事項庫(可以用空白分隔一次輸入)</div>
-      <div id="task-creator" style="display:flex; gap:2px; margin-bottom:10px;">
-        <input type="text" id="new-task-name" placeholder="事項名稱(工作 讀書 運動…)"
-               style="flex:1; border:1px solid #ccc; padding:5px; border-radius:4px; font-size:12px;">
-        <button class="btn btn-blue" onclick="addNewTaskManual()">增加</button>
-      </div>
-      <div id="task-pool"></div>
+        <div class="sidebar-title">事項庫(可以用空白分隔一次輸入)</div>
+        <div id="task-creator" style="display:flex; gap:2px; margin-bottom:10px;">
+            <input type="text" id="new-task-name" placeholder="事項名稱(工作 讀書 運動…)"
+                   style="flex:1; border:1px solid #ccc; padding:5px; border-radius:4px; font-size:12px;">
+            <button class="btn btn-blue" onclick="addNewTaskManual()">增加</button>
+        </div>
+        <div id="task-pool"></div>
     </div>
     <div id="calendar-area"><div id="calendar-grid"></div></div>
-  </div>
+</div>
 
 <script>
-  MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
-  window.addEventListener('touchmove', function () {}, { passive: false });
+    MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
+    window.addEventListener('touchmove', function () {}, { passive: false });
 
-  let draggedItem = null;
-  let sourceContainerId = null;
-  let isCopyMode = false;
-  let currentProjectName = "預設規畫";
-  let activeSchedule = {};
-  const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
-  let colorCounter = 0;
+    let draggedItem = null;
+    let sourceContainerId = null;
+    let isCopyMode = false;
+    let currentProjectName = "預設規畫";
+    let activeSchedule = {};
+    const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
+    let colorCounter = 0;
 
-  // ✅ 符合版面狀態
-  let fitMode = false;
-  let lastFitScale = 1;
+    // ✅ 符合版面狀態
+    let fitMode = false;
+    let lastFitScale = 1;
 
-  document.getElementById('start-date').valueAsDate = new Date();
+    document.getElementById('start-date').valueAsDate = new Date();
 
-  window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
-  window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
+    window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
+    window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
 
-  function isLineInApp() {
-    const ua = navigator.userAgent || "";
-    return ua.includes("Line/");
-  }
-  function maybeShowLineHint() {
-    if (!isLineInApp()) return;
-    if (sessionStorage.getItem('line_hint_shown') === '1') return;
-    sessionStorage.setItem('line_hint_shown', '1');
-    alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
-  }
-
-  // =========================
-  // ✅ Icon helpers (store as "[icon] name")
-  // =========================
-  function parseIconAndName(raw) {
-    const m = (raw || "").trim().match(/^\[([^\]]+)\]\s*(.+)$/);
-    if (m) return { icon: m[1].trim(), name: m[2].trim() };
-    return { icon: "", name: (raw || "").trim() };
-  }
-  function formatIconAndName(icon, name) {
-    icon = (icon || "").trim();
-    name = (name || "").trim();
-    return icon ? `[${icon}] ${name}` : name;
-  }
-
-  // =========================
-  // ✅ Icon panel (emoji picker)
-  // =========================
-  const ICONS = ["💼","📚","🏃","🍽️","🧹","🧠","🎯","🧘","🛒","📞","✍️","🛠️","🎵","🎮","🚗","💤","✅","⚠️"];
-
-  let iconPanelEl = null;
-  let iconPanelTargetCard = null;
-
-  function closeIconPanel() {
-    if (iconPanelEl) iconPanelEl.remove();
-    iconPanelEl = null;
-    iconPanelTargetCard = null;
-  }
-
-  function applyIconToCard(card, icon) {
-    const iconEl = card.querySelector(".task-icon");
-    if (iconEl) iconEl.textContent = icon || "";
-    captureCurrentGrid();
-  }
-
-  function openIconPanelForCard(card, anchorEl) {
-    closeIconPanel();
-
-    iconPanelTargetCard = card;
-
-    const panel = document.createElement("div");
-    panel.className = "icon-panel";
-
-    ICONS.forEach(ic => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = ic;
-      b.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        applyIconToCard(iconPanelTargetCard, ic);
-        closeIconPanel();
-      });
-      panel.appendChild(b);
-    });
-
-    const clearBtn = document.createElement("button");
-    clearBtn.type = "button";
-    clearBtn.className = "icon-clear";
-    clearBtn.textContent = "清除圖示";
-    clearBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      applyIconToCard(iconPanelTargetCard, "");
-      closeIconPanel();
-    });
-    panel.appendChild(clearBtn);
-
-    document.body.appendChild(panel);
-    iconPanelEl = panel;
-
-    const r = anchorEl.getBoundingClientRect();
-    const panelW = panel.offsetWidth;
-    const panelH = panel.offsetHeight;
-
-    let left = r.left;
-    let top = r.bottom + 6;
-
-    left = Math.max(8, Math.min(left, window.innerWidth - panelW - 8));
-    top = Math.max(8, Math.min(top, window.innerHeight - panelH - 8));
-
-    panel.style.left = left + "px";
-    panel.style.top = top + "px";
-  }
-
-  document.addEventListener("mousedown", (e) => {
-    if (!iconPanelEl) return;
-    if (iconPanelEl.contains(e.target)) return;
-    if (e.target.classList && e.target.classList.contains("task-icon")) return;
-    closeIconPanel();
-  });
-
-  document.addEventListener("touchstart", (e) => {
-    if (!iconPanelEl) return;
-    if (iconPanelEl.contains(e.target)) return;
-    if (e.target.classList && e.target.classList.contains("task-icon")) return;
-    closeIconPanel();
-  }, { passive: true });
-
-  window.addEventListener("dragstart", () => closeIconPanel(), true);
-
-  // ---------- 時段（0-24，下拉，預設 6-22） ----------
-  function populateTimeSelects() {
-    const startSel = document.getElementById('start-time');
-    const endSel = document.getElementById('end-time');
-    if (!startSel || !endSel) return;
-
-    if (startSel.options.length === 0) {
-      for (let h = 0; h <= 24; h++) {
-        const o1 = document.createElement('option');
-        o1.value = String(h);
-        o1.textContent = String(h);
-        startSel.appendChild(o1);
-
-        const o2 = document.createElement('option');
-        o2.value = String(h);
-        o2.textContent = String(h);
-        endSel.appendChild(o2);
-      }
+    function isLineInApp() {
+        const ua = navigator.userAgent || "";
+        return ua.includes("Line/");
+    }
+    function maybeShowLineHint() {
+        if (!isLineInApp()) return;
+        if (sessionStorage.getItem('line_hint_shown') === '1') return;
+        sessionStorage.setItem('line_hint_shown', '1');
+        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
     }
 
-    if (!startSel.dataset.defaultsApplied) {
-      startSel.value = "6";
-      endSel.value = "22";
-      startSel.dataset.defaultsApplied = "1";
-      endSel.dataset.defaultsApplied = "1";
+    // ---------- 時段（0-24，下拉，預設 6-22） ----------
+    function populateTimeSelects() {
+        const startSel = document.getElementById('start-time');
+        const endSel = document.getElementById('end-time');
+        if (!startSel || !endSel) return;
+
+        if (startSel.options.length === 0) {
+            for (let h = 0; h <= 24; h++) {
+                const o1 = document.createElement('option');
+                o1.value = String(h);
+                o1.textContent = String(h);
+                startSel.appendChild(o1);
+
+                const o2 = document.createElement('option');
+                o2.value = String(h);
+                o2.textContent = String(h);
+                endSel.appendChild(o2);
+            }
+        }
+
+        if (!startSel.dataset.defaultsApplied) {
+            startSel.value = "6";
+            endSel.value = "22";
+            startSel.dataset.defaultsApplied = "1";
+            endSel.dataset.defaultsApplied = "1";
+        }
+
+        function normalize() {
+            const s = parseInt(startSel.value, 10);
+            let e = parseInt(endSel.value, 10);
+            if (e <= s) {
+                e = Math.min(24, s + 1);
+                endSel.value = String(e);
+            }
+        }
+
+        if (!startSel.dataset.bound) {
+            startSel.dataset.bound = "1";
+            startSel.addEventListener('change', () => { normalize(); refreshTable(); });
+        }
+        if (!endSel.dataset.bound) {
+            endSel.dataset.bound = "1";
+            endSel.addEventListener('change', () => { normalize(); refreshTable(); });
+        }
+        normalize();
     }
 
-    function normalize() {
-      const s = parseInt(startSel.value, 10);
-      let e = parseInt(endSel.value, 10);
-      if (e <= s) {
-        e = Math.min(24, s + 1);
-        endSel.value = String(e);
-      }
-    }
+    // ---------- 通用：下拉 + 自訂 input（同步到 hidden input） ----------
+    function initSelectWithCustom(opts) {
+        const {
+            selectId, inputId, hiddenId,
+            baseValues, defaultValue,
+            min = 1, max = 9999
+        } = opts;
 
-    if (!startSel.dataset.bound) {
-      startSel.dataset.bound = "1";
-      startSel.addEventListener('change', () => { normalize(); refreshTable(); });
-    }
-    if (!endSel.dataset.bound) {
-      endSel.dataset.bound = "1";
-      endSel.addEventListener('change', () => { normalize(); refreshTable(); });
-    }
-    normalize();
-  }
+        const sel = document.getElementById(selectId);
+        const inp = document.getElementById(inputId);
+        const hid = document.getElementById(hiddenId);
+        if (!sel || !inp || !hid) return;
 
-  // ---------- 通用：下拉 + 自訂 input（同步到 hidden input） ----------
-  function initSelectWithCustom(opts) {
-    const {
-      selectId, inputId, hiddenId,
-      baseValues, defaultValue,
-      min = 1, max = 9999
-    } = opts;
-
-    const sel = document.getElementById(selectId);
-    const inp = document.getElementById(inputId);
-    const hid = document.getElementById(hiddenId);
-    if (!sel || !inp || !hid) return;
-
-    sel.innerHTML = "";
-    baseValues.forEach(v => {
-      const o = document.createElement('option');
-      o.value = String(v);
-      o.textContent = String(v);
-      sel.appendChild(o);
-    });
-    const customOpt = document.createElement('option');
-    customOpt.value = "__custom__";
-    customOpt.textContent = "自訂";
-    sel.appendChild(customOpt);
-
-    hid.value = String(defaultValue);
-    inp.min = String(min);
-    inp.max = String(max);
-    inp.value = String(defaultValue);
-
-    if (baseValues.includes(defaultValue)) {
-      sel.value = String(defaultValue);
-      inp.style.display = "none";
-    } else {
-      sel.value = "__custom__";
-      inp.style.display = "inline-block";
-    }
-
-    function clamp(n) {
-      if (isNaN(n)) return null;
-      return Math.max(min, Math.min(max, n));
-    }
-
-    function applyAndRefresh() {
-      captureCurrentGrid();
-      generateGrid();
-    }
-
-    function syncFromSelect() {
-      if (sel.value === "__custom__") {
-        inp.style.display = "inline-block";
-        inp.value = hid.value || inp.value;
-        inp.focus();
-      } else {
-        inp.style.display = "none";
-        hid.value = sel.value;
-        applyAndRefresh();
-      }
-    }
-
-    function syncFromInput() {
-      const v = clamp(parseInt(inp.value, 10));
-      if (v === null) return;
-      inp.value = String(v);
-      hid.value = String(v);
-      applyAndRefresh();
-    }
-
-    sel.addEventListener('change', syncFromSelect);
-    inp.addEventListener('change', syncFromInput);
-    inp.addEventListener('blur', syncFromInput);
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
-    });
-  }
-
-  function refreshTable() {
-    captureCurrentGrid();
-    generateGrid();
-    if (fitMode) applyFitSchedule();
-  }
-
-  function captureCurrentGrid() {
-    document.querySelectorAll('.grid-cell').forEach(cell => {
-      const card = cell.querySelector('.task-card');
-      const posKey = cell.dataset.pos;
-      if (card) {
-        activeSchedule[posKey] = {
-          name: formatIconAndName(
-            (card.querySelector('.task-icon')?.textContent || "").trim(),
-            (card.querySelector('.task-text')?.innerText || "").trim()
-          ),
-          color: card.style.backgroundColor
-        };
-      } else {
-        delete activeSchedule[posKey];
-      }
-    });
-  }
-
-  function exportData() {
-    captureCurrentGrid();
-
-    const exportObj = {
-      projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
-      projects: {}
-    };
-    exportObj.projectList.forEach(name => {
-      const data = localStorage.getItem('planner_v8_' + name);
-      if (data) exportObj.projects[name] = JSON.parse(data);
-    });
-
-    const jsonText = JSON.stringify(exportObj, null, 2);
-
-    if (isLineInApp()) {
-      const ok = confirm("LINE 內建瀏覽器可能無法下載檔案。\n\n按「確定」將 JSON 複製到剪貼簿（可貼到記事本/雲端硬碟再存成 .json）。");
-      if (!ok) return;
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(jsonText).then(() => {
-          alert("已複製 JSON 到剪貼簿！");
-        }).catch(() => {
-          window.prompt("剪貼簿權限受限，請手動複製下方 JSON：", jsonText);
+        sel.innerHTML = "";
+        baseValues.forEach(v => {
+            const o = document.createElement('option');
+            o.value = String(v);
+            o.textContent = String(v);
+            sel.appendChild(o);
         });
-      } else {
-        window.prompt("此瀏覽器不支援自動複製，請手動複製下方 JSON：", jsonText);
-      }
-      return;
-    }
-
-    const blob = new Blob([jsonText], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `planner_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function importData() { document.getElementById('import-file').click(); }
-
-  function handleFileImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const imported = JSON.parse(e.target.result);
-        if (imported.projectList && imported.projects) {
-          if (confirm("導入將合併現有規畫，確定嗎？")) {
-            let currentList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-            imported.projectList.forEach(name => {
-              if (!currentList.includes(name)) currentList.push(name);
-              localStorage.setItem('planner_v8_' + name, JSON.stringify(imported.projects[name]));
-            });
-            localStorage.setItem('planner_project_list', JSON.stringify(currentList));
-            location.reload();
-          }
-        }
-      } catch (err) { alert("格式錯誤。"); }
-    };
-    reader.readAsText(file);
-  }
-
-  function saveProject() {
-    captureCurrentGrid();
-    const nameInput = document.getElementById('new-project-name').value.trim();
-    if (nameInput) currentProjectName = nameInput;
-
-    const poolItems = Array.from(document.querySelectorAll('#task-pool .task-card')).map(card => ({
-      name: formatIconAndName(
-        (card.querySelector('.task-icon')?.textContent || "").trim(),
-        (card.querySelector('.task-text')?.innerText || "").trim()
-      ),
-      color: card.style.backgroundColor
-    }));
-
-    const projectData = {
-      settings: {
-        date: document.getElementById('start-date').value,
-        start: document.getElementById('start-time').value,
-        end: document.getElementById('end-time').value,
-        interval: document.getElementById('interval').value,
-        days: document.getElementById('days-count').value,
-        cols: document.getElementById('cols-per-day').value
-      },
-      schedule: activeSchedule,
-      pool: poolItems
-    };
-
-    localStorage.setItem('planner_v8_' + currentProjectName, JSON.stringify(projectData));
-    let projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-    if (!projectList.includes(currentProjectName)) projectList.push(currentProjectName);
-    localStorage.setItem('planner_project_list', JSON.stringify(projectList));
-    localStorage.setItem('planner_last_active', currentProjectName);
-    updateProjectSelector();
-    alert(`「${currentProjectName}」已儲存`);
-  }
-
-  function switchProject() {
-    const sel = document.getElementById('project-selector');
-    if (!sel.value) return;
-    currentProjectName = sel.value;
-    const data = JSON.parse(localStorage.getItem('planner_v8_' + currentProjectName));
-    if (!data) return;
-
-    document.getElementById('start-date').value = data.settings.date;
-    document.getElementById('start-time').value = data.settings.start;
-    document.getElementById('end-time').value = data.settings.end;
-    populateTimeSelects();
-
-    document.getElementById('interval').value = String(parseInt(data.settings.interval, 10) || 60);
-    document.getElementById('days-count').value = String(parseInt(data.settings.days, 10) || 7);
-    document.getElementById('cols-per-day').value = String(parseInt(data.settings.cols, 10) || 2);
-
-    syncSelectCustomUIFromHidden();
-
-    activeSchedule = data.schedule || {};
-
-    const pool = document.getElementById('task-pool');
-    pool.innerHTML = "";
-    (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
-    generateGrid();
-
-    if (fitMode) applyFitSchedule();
-  }
-
-  function syncSelectCustomUIFromHidden() {
-    const iv = parseInt(document.getElementById('interval').value, 10) || 60;
-    setSelectCustomValue('interval-select', 'interval-custom', 'interval', [5,10,15,30,60,120], iv);
-
-    const dy = parseInt(document.getElementById('days-count').value, 10) || 7;
-    setSelectCustomValue('days-select', 'days-custom', 'days-count', [1,3,5,7,14,21,30], dy);
-
-    const co = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
-    setSelectCustomValue('cols-select', 'cols-custom', 'cols-per-day', [1,2,3,4,5], co);
-  }
-
-  function setSelectCustomValue(selectId, inputId, hiddenId, baseValues, value) {
-    const sel = document.getElementById(selectId);
-    const inp = document.getElementById(inputId);
-    const hid = document.getElementById(hiddenId);
-    if (!sel || !inp || !hid) return;
-
-    hid.value = String(value);
-
-    if (baseValues.includes(value)) {
-      sel.value = String(value);
-      inp.style.display = "none";
-      inp.value = String(value);
-    } else {
-      sel.value = "__custom__";
-      inp.style.display = "inline-block";
-      inp.value = String(value);
-    }
-  }
-
-  function updateProjectSelector() {
-    const sel = document.getElementById('project-selector');
-    const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-    sel.innerHTML = '<option value="">-- 選擇規畫 --</option>';
-    list.forEach(name => {
-      const opt = document.createElement('option'); opt.value = name; opt.text = name;
-      if (name === currentProjectName) opt.selected = true;
-      sel.add(opt);
-    });
-  }
-
-  function deleteProject() {
-    if (!confirm(`確定刪除？`)) return;
-    localStorage.removeItem('planner_v8_' + currentProjectName);
-    let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-    localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
-    location.reload();
-  }
-
-  function createTaskElement(name, color) {
-    const div = document.createElement('div');
-    div.className = 'task-card';
-    div.draggable = true;
-    div.style.backgroundColor = color;
-
-    const parsed = parseIconAndName(name);
-    div.title = parsed.name || name;
-
-    const dot = document.createElement('div');
-    dot.className = 'color-dot';
-    const ci = document.createElement('input');
-    ci.type = 'color'; ci.value = rgbToHex(color);
-    ci.oninput = (e) => { div.style.backgroundColor = e.target.value; captureCurrentGrid(); };
-    ci.onmousedown = (e) => e.stopPropagation();
-    dot.appendChild(ci);
-    div.appendChild(dot);
-
-    // ✅ icon (click to open panel)
-    const iconEl = document.createElement('span');
-    iconEl.className = 'task-icon';
-    iconEl.textContent = parsed.icon || "";
-    iconEl.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // 若正在編輯文字，先結束編輯避免混亂
-      const editing = div.querySelector('.task-text[contenteditable="true"]');
-      if (editing) editing.blur();
-      openIconPanelForCard(div, iconEl);
-    });
-    div.appendChild(iconEl);
-
-    const text = document.createElement('span');
-    text.className = 'task-text';
-    text.innerText = parsed.name;
-    text.contentEditable = "false";
-
-    text.ondblclick = () => {
-      closeIconPanel();
-      // 進入編輯：把 icon+name 合成一段讓使用者改
-      const ic = (div.querySelector('.task-icon')?.textContent || "").trim();
-      text.innerText = formatIconAndName(ic, text.innerText);
-
-      text.contentEditable = "true";
-      div.draggable = false;
-      text.focus();
-      const range = document.createRange();
-      range.selectNodeContents(text);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-    };
-
-    text.onblur = () => {
-      text.contentEditable = "false";
-      div.draggable = true;
-
-      // ✅ 拆回 icon + 純名稱
-      const p = parseIconAndName(text.innerText);
-      div.querySelector('.task-icon').textContent = p.icon || "";
-      text.innerText = p.name;
-      div.title = p.name;
-
-      captureCurrentGrid();
-    };
-
-    text.onkeydown = (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); text.blur(); }
-    };
-
-    div.appendChild(text);
-
-    const del = document.createElement('span');
-    del.className = 'delete-btn'; del.innerHTML = '×';
-    del.onclick = (e) => {
-      e.stopPropagation();
-      closeIconPanel();
-      const parentCell = div.closest('.grid-cell');
-      if (parentCell) delete activeSchedule[parentCell.dataset.pos];
-      div.remove();
-    };
-    div.appendChild(del);
-
-    div.addEventListener('dragstart', (e) => {
-      closeIconPanel();
-      draggedItem = div;
-      sourceContainerId = div.parentElement.id;
-      try { e.dataTransfer.setData('text/plain', '1'); } catch (_) {}
-      if (!isCopyMode) div.style.opacity = '0.4';
-    });
-
-    div.addEventListener('dragend', () => { div.style.opacity = '1'; draggedItem = null; });
-    return div;
-  }
-
-  function addNewTaskManual() {
-    const input = document.getElementById('new-task-name');
-    const names = input.value.trim().split(/\s+/);
-    names.forEach(name => {
-      if (name) document.getElementById('task-pool').appendChild(createTaskElement(name, colors[colorCounter++ % 7]));
-    });
-    input.value = '';
-  }
-
-  function generateGrid() {
-    const startDateVal = document.getElementById('start-date').value;
-    const startH = parseInt(document.getElementById('start-time').value, 10);
-    const endH = parseInt(document.getElementById('end-time').value, 10);
-
-    const interval = parseInt(document.getElementById('interval').value, 10) || 60;
-    const days = parseInt(document.getElementById('days-count').value, 10) || 7;
-    const colsPerDay = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
-
-    const grid = document.getElementById('calendar-grid');
-    grid.innerHTML = '';
-    grid.style.gridTemplateColumns = `65px repeat(${days * colsPerDay}, minmax(80px, 1fr))`;
-
-    const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-    const baseDate = new Date(startDateVal);
-
-    grid.appendChild(createHeaderCell(''));
-    for (let i = 0; i < days; i++) {
-      const d = new Date(baseDate);
-      d.setDate(baseDate.getDate() + i);
-      const head = createHeaderCell(
-        `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`,
-        `span ${colsPerDay}`
-      );
-      grid.appendChild(head);
-    }
-
-    const totalMinutes = (endH - startH) * 60;
-    for (let m = 0; m <= totalMinutes; m += interval) {
-      const currentH = startH + Math.floor(m / 60);
-      if (currentH >= endH && m % 60 !== 0) break;
-
-      const timeStr = `${currentH.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
-      const label = document.createElement('div'); label.className = 'time-label';
-      label.innerHTML = `<span class="time-text">${timeStr}</span>`;
-      grid.appendChild(label);
-
-      for (let d = 0; d < days; d++) {
-        const targetDate = new Date(baseDate); targetDate.setDate(baseDate.getDate() + d);
-        const dateKey = targetDate.toISOString().split('T')[0];
-
-        for (let c = 0; c < colsPerDay; c++) {
-          const cell = document.createElement('div');
-          cell.className = 'grid-cell';
-          cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
-
-          cell.ondragenter = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
-          cell.ondragover  = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
-          cell.ondragleave = () => cell.classList.remove('drag-over');
-          cell.ondrop = (e) => handleDrop(e, cell);
-
-          if (activeSchedule[cell.dataset.pos]) {
-            cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
-          }
-          grid.appendChild(cell);
-        }
-      }
-    }
-  }
-
-  function handleDrop(e, cell) {
-    e.preventDefault();
-    closeIconPanel();
-    cell.classList.remove('drag-over');
-    if (!draggedItem) return;
-
-    const icon = (draggedItem.querySelector('.task-icon')?.textContent || "").trim();
-    const name = (draggedItem.querySelector('.task-text')?.innerText || "").trim();
-    const color = draggedItem.style.backgroundColor;
-
-    const fullName = formatIconAndName(icon, name);
-    activeSchedule[cell.dataset.pos] = { name: fullName, color };
-
-    const newItem = (sourceContainerId === 'task-pool' || isCopyMode)
-      ? createTaskElement(fullName, color)
-      : draggedItem;
-
-    cell.innerHTML = '';
-    cell.appendChild(newItem);
-  }
-
-  function createHeaderCell(html, gridColumn = '') {
-    const div = document.createElement('div');
-    div.className = 'grid-header-day';
-    div.innerHTML = html;
-    if (gridColumn) div.style.gridColumn = gridColumn;
-    return div;
-  }
-
-  function rgbToHex(rgb) {
-    if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff';
-    const res = rgb.match(/\d+/g);
-    return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
-  }
-
-  // =========================
-  // ✅ 符合版面（切換）功能
-  // =========================
-  function applyFitSchedule() {
-    const area = document.getElementById('calendar-area');
-    const grid = document.getElementById('calendar-grid');
-    if (!area || !grid) return;
-
-    grid.style.transform = 'none';
-
-    requestAnimationFrame(() => {
-      const availableWidth = area.clientWidth;
-      const contentWidth = grid.scrollWidth;
-      if (!availableWidth || !contentWidth) return;
-
-      const scale = Math.min(1, availableWidth / contentWidth);
-      lastFitScale = scale;
-
-      grid.style.transform = `scale(${scale})`;
-      area.scrollLeft = 0;
-      area.scrollTop = 0;
-    });
-  }
-
-  function clearFitSchedule() {
-    const grid = document.getElementById('calendar-grid');
-    const area = document.getElementById('calendar-area');
-    if (!grid || !area) return;
-    grid.style.transform = 'none';
-    area.scrollLeft = 0;
-    area.scrollTop = 0;
-  }
-
-  function updateFitButtonUI() {
-    const btn = document.getElementById('fit-btn');
-    if (!btn) return;
-    btn.textContent = fitMode ? "恢復原大小" : "符合版面";
-  }
-
-  function toggleFitSchedule() {
-    fitMode = !fitMode;
-    if (fitMode) applyFitSchedule();
-    else clearFitSchedule();
-    updateFitButtonUI();
-  }
-
-  window.addEventListener('resize', () => {
-    if (fitMode) applyFitSchedule();
-  });
-
-  async function exportScheduleImage() {
-    captureCurrentGrid();
-
-    const editing = document.querySelector('.task-text[contenteditable="true"]');
-    if (editing) editing.blur();
-    closeIconPanel();
-
-    const grid = document.getElementById('calendar-grid');
-    if (!grid) return alert('找不到 calendar-grid');
-
-    const oldTransform = grid.style.transform;
-    grid.style.transform = 'none';
-
-    await new Promise(res => requestAnimationFrame(res));
-
-    const exportWidth = grid.scrollWidth;
-    const exportHeight = grid.scrollHeight;
-
-    try {
-      const canvas = await html2canvas(grid, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        width: exportWidth,
-        height: exportHeight,
-        windowWidth: exportWidth,
-        windowHeight: exportHeight,
-        scrollX: 0,
-        scrollY: 0
-      });
-
-      const date = new Date().toISOString().split('T')[0];
-      const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
-      const filename = `${name}_${date}.png`;
-
-      const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-
-      if (isLineInApp()) {
-        try {
-          const file = new File([blob], filename, { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
-            await navigator.share({ files: [file], title: filename });
-            return;
-          }
-        } catch (_) {}
-
-        const dataUrl = canvas.toDataURL('image/png');
-        const w = window.open();
-        if (w) {
-          w.document.write(`<title>${filename}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><img src="${dataUrl}" style="max-width:100%;height:auto;">`);
-          w.document.close();
-          alert("已開新頁顯示圖片。\n請長按圖片→儲存圖片。");
+        const customOpt = document.createElement('option');
+        customOpt.value = "__custom__";
+        customOpt.textContent = "自訂";
+        sel.appendChild(customOpt);
+
+        hid.value = String(defaultValue);
+        inp.min = String(min);
+        inp.max = String(max);
+        inp.value = String(defaultValue);
+
+        if (baseValues.includes(defaultValue)) {
+            sel.value = String(defaultValue);
+            inp.style.display = "none";
         } else {
-          alert("LINE 內建瀏覽器可能阻擋開新頁。\n請用右上角「⋯」→ 在外部瀏覽器開啟後再匯出圖片。");
+            sel.value = "__custom__";
+            inp.style.display = "inline-block";
         }
-        return;
-      }
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+        function clamp(n) {
+            if (isNaN(n)) return null;
+            return Math.max(min, Math.min(max, n));
+        }
 
-    } catch (err) {
-      console.error(err);
-      alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
-    } finally {
-      grid.style.transform = oldTransform || 'none';
-      if (fitMode) applyFitSchedule();
+        function applyAndRefresh() {
+            captureCurrentGrid();
+            generateGrid();
+        }
+
+        function syncFromSelect() {
+            if (sel.value === "__custom__") {
+                inp.style.display = "inline-block";
+                inp.value = hid.value || inp.value;
+                inp.focus();
+            } else {
+                inp.style.display = "none";
+                hid.value = sel.value;
+                applyAndRefresh();
+            }
+        }
+
+        function syncFromInput() {
+            const v = clamp(parseInt(inp.value, 10));
+            if (v === null) return;
+            inp.value = String(v);
+            hid.value = String(v);
+            applyAndRefresh();
+        }
+
+        sel.addEventListener('change', syncFromSelect);
+        inp.addEventListener('change', syncFromInput);
+        inp.addEventListener('blur', syncFromInput);
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+        });
     }
-  }
 
-  function addDefaultExampleTasksIfEmpty() {
-    const pool = document.getElementById('task-pool');
-    if (!pool) return;
-
-    const hasAnyPool = pool.querySelector('.task-card');
-    const projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-    const hasAnyProjectData = projectList.some(name => localStorage.getItem('planner_v8_' + name));
-
-    if (hasAnyPool || hasAnyProjectData) return;
-
-    ["[💼] 工作", "[📚] 讀書", "[🏃] 運動"].forEach(name => {
-      pool.appendChild(createTaskElement(name, colors[colorCounter++ % 7]));
-    });
-  }
-
-  window.onload = () => {
-    populateTimeSelects();
-    maybeShowLineHint();
-
-    initSelectWithCustom({
-      selectId: "interval-select",
-      inputId: "interval-custom",
-      hiddenId: "interval",
-      baseValues: [5, 10, 15, 30, 60, 120],
-      defaultValue: 60,
-      min: 1,
-      max: 1440
-    });
-
-    initSelectWithCustom({
-      selectId: "days-select",
-      inputId: "days-custom",
-      hiddenId: "days-count",
-      baseValues: [1, 3, 5, 7, 14, 21, 30],
-      defaultValue: 7,
-      min: 1,
-      max: 365
-    });
-
-    initSelectWithCustom({
-      selectId: "cols-select",
-      inputId: "cols-custom",
-      hiddenId: "cols-per-day",
-      baseValues: [1, 2, 3, 4, 5],
-      defaultValue: 2,
-      min: 1,
-      max: 30
-    });
-
-    updateProjectSelector();
-    updateFitButtonUI();
-
-    const last = localStorage.getItem('planner_last_active');
-    if (last) {
-      currentProjectName = last;
-      switchProject();
-    } else {
-      addDefaultExampleTasksIfEmpty();
-      generateGrid();
+    function refreshTable() {
+        captureCurrentGrid();
+        generateGrid();
+        // ✅ 若目前是符合版面狀態，重畫後自動重新套用
+        if (fitMode) applyFitSchedule();
     }
-  };
+
+    function captureCurrentGrid() {
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            const card = cell.querySelector('.task-card');
+            const posKey = cell.dataset.pos;
+            if (card) {
+                activeSchedule[posKey] = {
+                    name: card.querySelector('.task-text').innerText,
+                    color: card.style.backgroundColor
+                };
+            } else { delete activeSchedule[posKey]; }
+        });
+    }
+
+    function exportData() {
+        captureCurrentGrid();
+
+        const exportObj = {
+            projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
+            projects: {}
+        };
+        exportObj.projectList.forEach(name => {
+            const data = localStorage.getItem('planner_v8_' + name);
+            if (data) exportObj.projects[name] = JSON.parse(data);
+        });
+
+        const jsonText = JSON.stringify(exportObj, null, 2);
+
+        if (isLineInApp()) {
+            const ok = confirm("LINE 內建瀏覽器可能無法下載檔案。\n\n按「確定」將 JSON 複製到剪貼簿（可貼到記事本/雲端硬碟再存成 .json）。");
+            if (!ok) return;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(jsonText).then(() => {
+                    alert("已複製 JSON 到剪貼簿！");
+                }).catch(() => {
+                    window.prompt("剪貼簿權限受限，請手動複製下方 JSON：", jsonText);
+                });
+            } else {
+                window.prompt("此瀏覽器不支援自動複製，請手動複製下方 JSON：", jsonText);
+            }
+            return;
+        }
+
+        const blob = new Blob([jsonText], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `planner_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importData() { document.getElementById('import-file').click(); }
+
+    function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.projectList && imported.projects) {
+                    if (confirm("導入將合併現有規畫，確定嗎？")) {
+                        let currentList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+                        imported.projectList.forEach(name => {
+                            if (!currentList.includes(name)) currentList.push(name);
+                            localStorage.setItem('planner_v8_' + name, JSON.stringify(imported.projects[name]));
+                        });
+                        localStorage.setItem('planner_project_list', JSON.stringify(currentList));
+                        location.reload();
+                    }
+                }
+            } catch (err) { alert("格式錯誤。"); }
+        };
+        reader.readAsText(file);
+    }
+
+    function saveProject() {
+        captureCurrentGrid();
+        const nameInput = document.getElementById('new-project-name').value.trim();
+        if (nameInput) currentProjectName = nameInput;
+
+        const poolItems = Array.from(document.querySelectorAll('#task-pool .task-card')).map(card => ({
+            name: card.querySelector('.task-text').innerText,
+            color: card.style.backgroundColor
+        }));
+
+        const projectData = {
+            settings: {
+                date: document.getElementById('start-date').value,
+                start: document.getElementById('start-time').value,
+                end: document.getElementById('end-time').value,
+                interval: document.getElementById('interval').value,
+                days: document.getElementById('days-count').value,
+                cols: document.getElementById('cols-per-day').value
+            },
+            schedule: activeSchedule,
+            pool: poolItems
+        };
+
+        localStorage.setItem('planner_v8_' + currentProjectName, JSON.stringify(projectData));
+        let projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        if (!projectList.includes(currentProjectName)) projectList.push(currentProjectName);
+        localStorage.setItem('planner_project_list', JSON.stringify(projectList));
+        localStorage.setItem('planner_last_active', currentProjectName);
+        updateProjectSelector();
+        alert(`「${currentProjectName}」已儲存`);
+    }
+
+    function switchProject() {
+        const sel = document.getElementById('project-selector');
+        if (!sel.value) return;
+        currentProjectName = sel.value;
+        const data = JSON.parse(localStorage.getItem('planner_v8_' + currentProjectName));
+        if (!data) return;
+
+        document.getElementById('start-date').value = data.settings.date;
+        document.getElementById('start-time').value = data.settings.start;
+        document.getElementById('end-time').value = data.settings.end;
+        populateTimeSelects();
+
+        document.getElementById('interval').value = String(parseInt(data.settings.interval, 10) || 60);
+        document.getElementById('days-count').value = String(parseInt(data.settings.days, 10) || 7);
+        document.getElementById('cols-per-day').value = String(parseInt(data.settings.cols, 10) || 2);
+
+        syncSelectCustomUIFromHidden();
+
+        activeSchedule = data.schedule || {};
+
+        const pool = document.getElementById('task-pool');
+        pool.innerHTML = "";
+        (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
+        generateGrid();
+
+        // ✅ 規畫切換後，如果是符合版面狀態就套用
+        if (fitMode) applyFitSchedule();
+    }
+
+    function syncSelectCustomUIFromHidden() {
+        const iv = parseInt(document.getElementById('interval').value, 10) || 60;
+        setSelectCustomValue('interval-select', 'interval-custom', 'interval', [5,10,15,30,60,120], iv);
+
+        const dy = parseInt(document.getElementById('days-count').value, 10) || 7;
+        setSelectCustomValue('days-select', 'days-custom', 'days-count', [1,3,5,7,14,21,30], dy);
+
+        const co = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
+        setSelectCustomValue('cols-select', 'cols-custom', 'cols-per-day', [1,2,3,4,5], co);
+    }
+
+    function setSelectCustomValue(selectId, inputId, hiddenId, baseValues, value) {
+        const sel = document.getElementById(selectId);
+        const inp = document.getElementById(inputId);
+        const hid = document.getElementById(hiddenId);
+        if (!sel || !inp || !hid) return;
+
+        hid.value = String(value);
+
+        if (baseValues.includes(value)) {
+            sel.value = String(value);
+            inp.style.display = "none";
+            inp.value = String(value);
+        } else {
+            sel.value = "__custom__";
+            inp.style.display = "inline-block";
+            inp.value = String(value);
+        }
+    }
+
+    function updateProjectSelector() {
+        const sel = document.getElementById('project-selector');
+        const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        sel.innerHTML = '<option value="">-- 選擇規畫 --</option>';
+        list.forEach(name => {
+            const opt = document.createElement('option'); opt.value = name; opt.text = name;
+            if (name === currentProjectName) opt.selected = true;
+            sel.add(opt);
+        });
+    }
+
+    function deleteProject() {
+        if (!confirm(`確定刪除？`)) return;
+        localStorage.removeItem('planner_v8_' + currentProjectName);
+        let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
+        location.reload();
+    }
+
+    function createTaskElement(name, color) {
+        const div = document.createElement('div');
+        div.className = 'task-card';
+        div.draggable = true;
+        div.style.backgroundColor = color;
+        div.title = name;
+
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        const ci = document.createElement('input');
+        ci.type = 'color'; ci.value = rgbToHex(color);
+        ci.oninput = (e) => { div.style.backgroundColor = e.target.value; captureCurrentGrid(); };
+        ci.onmousedown = (e) => e.stopPropagation();
+        dot.appendChild(ci);
+        div.appendChild(dot);
+
+        const text = document.createElement('span');
+        text.className = 'task-text';
+        text.innerText = name;
+        text.contentEditable = "false";
+
+        text.ondblclick = () => {
+            text.contentEditable = "true";
+            div.draggable = false;
+            text.focus();
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        };
+
+        text.onblur = () => {
+            text.contentEditable = "false";
+            div.draggable = true;
+            div.title = text.innerText;
+            captureCurrentGrid();
+        };
+
+        text.onkeydown = (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); text.blur(); }
+        };
+
+        div.appendChild(text);
+
+        const del = document.createElement('span');
+        del.className = 'delete-btn'; del.innerHTML = '×';
+        del.onclick = (e) => {
+            e.stopPropagation();
+            const parentCell = div.closest('.grid-cell');
+            if (parentCell) delete activeSchedule[parentCell.dataset.pos];
+            div.remove();
+        };
+        div.appendChild(del);
+
+        div.addEventListener('dragstart', (e) => {
+            draggedItem = div;
+            sourceContainerId = div.parentElement.id;
+            try { e.dataTransfer.setData('text/plain', '1'); } catch (_) {}
+            if (!isCopyMode) div.style.opacity = '0.4';
+        });
+
+        div.addEventListener('dragend', () => { div.style.opacity = '1'; draggedItem = null; });
+        return div;
+    }
+
+    function addNewTaskManual() {
+        const input = document.getElementById('new-task-name');
+        const names = input.value.trim().split(/\s+/);
+        names.forEach(name => {
+            if (name) document.getElementById('task-pool').appendChild(createTaskElement(name, colors[colorCounter++ % 7]));
+        });
+        input.value = '';
+    }
+
+    function generateGrid() {
+        const startDateVal = document.getElementById('start-date').value;
+        const startH = parseInt(document.getElementById('start-time').value, 10);
+        const endH = parseInt(document.getElementById('end-time').value, 10);
+
+        const interval = parseInt(document.getElementById('interval').value, 10) || 60;
+        const days = parseInt(document.getElementById('days-count').value, 10) || 7;
+        const colsPerDay = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
+
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+        grid.style.gridTemplateColumns = `65px repeat(${days * colsPerDay}, minmax(80px, 1fr))`;
+
+        const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+        const baseDate = new Date(startDateVal);
+
+        // ✅ 第一列：日期（跨 colsPerDay 欄）
+        grid.appendChild(createHeaderCell(''));
+        for (let i = 0; i < days; i++) {
+            const d = new Date(baseDate);
+            d.setDate(baseDate.getDate() + i);
+            const head = createHeaderCell(
+                `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`,
+                `span ${colsPerDay}`
+            );
+            grid.appendChild(head);
+        }
+
+        // ❌ 已移除第二列：欄位數字 1、2、3…（grid-header-sub）
+
+        const totalMinutes = (endH - startH) * 60;
+        for (let m = 0; m <= totalMinutes; m += interval) {
+            const currentH = startH + Math.floor(m / 60);
+            if (currentH >= endH && m % 60 !== 0) break;
+
+            const timeStr = `${currentH.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+            const label = document.createElement('div'); label.className = 'time-label';
+            label.innerHTML = `<span class="time-text">${timeStr}</span>`;
+            grid.appendChild(label);
+
+            for (let d = 0; d < days; d++) {
+                const targetDate = new Date(baseDate); targetDate.setDate(baseDate.getDate() + d);
+                const dateKey = targetDate.toISOString().split('T')[0];
+
+                for (let c = 0; c < colsPerDay; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
+
+                    cell.ondragenter = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+                    cell.ondragover  = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+                    cell.ondragleave = () => cell.classList.remove('drag-over');
+                    cell.ondrop = (e) => handleDrop(e, cell);
+
+                    if (activeSchedule[cell.dataset.pos]) {
+                        cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+        }
+    }
+
+    function handleDrop(e, cell) {
+        e.preventDefault();
+        cell.classList.remove('drag-over');
+        if (!draggedItem) return;
+
+        const name = draggedItem.querySelector('.task-text').innerText;
+        const color = draggedItem.style.backgroundColor;
+
+        activeSchedule[cell.dataset.pos] = { name, color };
+
+        const newItem = (sourceContainerId === 'task-pool' || isCopyMode)
+            ? createTaskElement(name, color)
+            : draggedItem;
+
+        cell.innerHTML = '';
+        cell.appendChild(newItem);
+    }
+
+    function createHeaderCell(html, gridColumn = '') {
+        const div = document.createElement('div');
+        div.className = 'grid-header-day';
+        div.innerHTML = html;
+        if (gridColumn) div.style.gridColumn = gridColumn;
+        return div;
+    }
+
+    function rgbToHex(rgb) {
+        if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff';
+        const res = rgb.match(/\d+/g);
+        return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
+    }
+
+    // =========================
+    // ✅ 符合版面（切換）功能
+    // =========================
+    function applyFitSchedule() {
+        const area = document.getElementById('calendar-area');
+        const grid = document.getElementById('calendar-grid');
+        if (!area || !grid) return;
+
+        // 先清掉 transform，拿到原始寬度
+        grid.style.transform = 'none';
+
+        requestAnimationFrame(() => {
+            const availableWidth = area.clientWidth;
+            const contentWidth = grid.scrollWidth;
+
+            if (!availableWidth || !contentWidth) return;
+
+            const scale = Math.min(1, availableWidth / contentWidth);
+            lastFitScale = scale;
+
+            grid.style.transform = `scale(${scale})`;
+            area.scrollLeft = 0;
+            area.scrollTop = 0;
+        });
+    }
+
+    function clearFitSchedule() {
+        const grid = document.getElementById('calendar-grid');
+        const area = document.getElementById('calendar-area');
+        if (!grid || !area) return;
+        grid.style.transform = 'none';
+        area.scrollLeft = 0;
+        area.scrollTop = 0;
+    }
+
+    function updateFitButtonUI() {
+        const btn = document.getElementById('fit-btn');
+        if (!btn) return;
+        btn.textContent = fitMode ? "恢復原大小" : "符合版面";
+    }
+
+    function toggleFitSchedule() {
+        fitMode = !fitMode;
+        if (fitMode) applyFitSchedule();
+        else clearFitSchedule();
+        updateFitButtonUI();
+    }
+
+    // 視窗大小改變時：若在符合版面狀態，自動重算縮放
+    window.addEventListener('resize', () => {
+        if (fitMode) applyFitSchedule();
+    });
+
+    async function exportScheduleImage() {
+        captureCurrentGrid();
+
+        const editing = document.querySelector('.task-text[contenteditable="true"]');
+        if (editing) editing.blur();
+
+        const grid = document.getElementById('calendar-grid');
+        if (!grid) return alert('找不到 calendar-grid');
+
+        // ✅ 匯出時先暫時移除縮放，確保圖片是原尺寸（不會被 scale 影響）
+        const oldTransform = grid.style.transform;
+        grid.style.transform = 'none';
+
+        // 等一個 frame 讓 layout 更新
+        await new Promise(res => requestAnimationFrame(res));
+
+        const exportWidth = grid.scrollWidth;
+        const exportHeight = grid.scrollHeight;
+
+        try {
+            const canvas = await html2canvas(grid, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                width: exportWidth,
+                height: exportHeight,
+                windowWidth: exportWidth,
+                windowHeight: exportHeight,
+                scrollX: 0,
+                scrollY: 0
+            });
+
+            const date = new Date().toISOString().split('T')[0];
+            const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
+            const filename = `${name}_${date}.png`;
+
+            const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+
+            if (isLineInApp()) {
+                try {
+                    const file = new File([blob], filename, { type: 'image/png' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+                        await navigator.share({ files: [file], title: filename });
+                        return;
+                    }
+                } catch (_) {}
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const w = window.open();
+                if (w) {
+                    w.document.write(`<title>${filename}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><img src="${dataUrl}" style="max-width:100%;height:auto;">`);
+                    w.document.close();
+                    alert("已開新頁顯示圖片。\n請長按圖片→儲存圖片。");
+                } else {
+                    alert("LINE 內建瀏覽器可能阻擋開新頁。\n請用右上角「⋯」→ 在外部瀏覽器開啟後再匯出圖片。");
+                }
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+
+        } catch (err) {
+            console.error(err);
+            alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
+        } finally {
+            // ✅ 還原縮放狀態
+            grid.style.transform = oldTransform || 'none';
+            if (fitMode) applyFitSchedule();
+        }
+    }
+
+    // ✅ 初次示例事項：工作 / 讀書 / 運動（只在沒有任何已儲存資料時加入）
+    function addDefaultExampleTasksIfEmpty() {
+        const pool = document.getElementById('task-pool');
+        if (!pool) return;
+
+        // 若已經有項目或已有任何規畫資料，就不塞示例
+        const hasAnyPool = pool.querySelector('.task-card');
+        const projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        const hasAnyProjectData = projectList.some(name => localStorage.getItem('planner_v8_' + name));
+
+        if (hasAnyPool || hasAnyProjectData) return;
+
+        ["工作", "讀書", "運動"].forEach(name => {
+            pool.appendChild(createTaskElement(name, colors[colorCounter++ % 7]));
+        });
+    }
+
+    window.onload = () => {
+        populateTimeSelects();
+        maybeShowLineHint();
+
+        initSelectWithCustom({
+            selectId: "interval-select",
+            inputId: "interval-custom",
+            hiddenId: "interval",
+            baseValues: [5, 10, 15, 30, 60, 120],
+            defaultValue: 60,
+            min: 1,
+            max: 1440
+        });
+
+        initSelectWithCustom({
+            selectId: "days-select",
+            inputId: "days-custom",
+            hiddenId: "days-count",
+            baseValues: [1, 3, 5, 7, 14, 21, 30],
+            defaultValue: 7,
+            min: 1,
+            max: 365
+        });
+
+        initSelectWithCustom({
+            selectId: "cols-select",
+            inputId: "cols-custom",
+            hiddenId: "cols-per-day",
+            baseValues: [1, 2, 3, 4, 5],
+            defaultValue: 2,
+            min: 1,
+            max: 30
+        });
+
+        updateProjectSelector();
+        updateFitButtonUI();
+
+        const last = localStorage.getItem('planner_last_active');
+        if (last) {
+            currentProjectName = last;
+            switchProject();
+        } else {
+            // ✅ 沒有規畫時，先塞示例事項
+            addDefaultExampleTasksIfEmpty();
+            generateGrid();
+        }
+    };
 </script>
 </body>
 </html>
-```
