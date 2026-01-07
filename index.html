@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>智慧規劃表 - 懸停顯示全名版</title>
+<title>智慧規劃表</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
@@ -186,6 +186,7 @@
 
     <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
 
+    <!-- source of truth -->
     <input type="hidden" id="interval" value="60">
     <input type="hidden" id="days-count" value="7">
     <input type="hidden" id="cols-per-day" value="2">
@@ -232,6 +233,7 @@
         alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
     }
 
+    // ---------- 時段（0-24，下拉，預設 6-22） ----------
     function populateTimeSelects() {
         const startSel = document.getElementById('start-time');
         const endSel = document.getElementById('end-time');
@@ -278,6 +280,7 @@
         normalize();
     }
 
+    // ---------- 通用：下拉 + 自訂 input（同步到 hidden input） ----------
     function initSelectWithCustom(opts) {
         const {
             selectId, inputId, hiddenId,
@@ -373,6 +376,7 @@
 
     function exportData() {
         captureCurrentGrid();
+
         const exportObj = {
             projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
             projects: {}
@@ -482,12 +486,44 @@
         document.getElementById('days-count').value = String(parseInt(data.settings.days, 10) || 7);
         document.getElementById('cols-per-day').value = String(parseInt(data.settings.cols, 10) || 2);
 
+        syncSelectCustomUIFromHidden();
+
         activeSchedule = data.schedule || {};
 
         const pool = document.getElementById('task-pool');
         pool.innerHTML = "";
         (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
         generateGrid();
+    }
+
+    function syncSelectCustomUIFromHidden() {
+        const iv = parseInt(document.getElementById('interval').value, 10) || 60;
+        setSelectCustomValue('interval-select', 'interval-custom', 'interval', [5,10,15,30,60,120], iv);
+
+        const dy = parseInt(document.getElementById('days-count').value, 10) || 7;
+        setSelectCustomValue('days-select', 'days-custom', 'days-count', [1,3,5,7,14,21,30], dy);
+
+        const co = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
+        setSelectCustomValue('cols-select', 'cols-custom', 'cols-per-day', [1,2,3,4,5], co);
+    }
+
+    function setSelectCustomValue(selectId, inputId, hiddenId, baseValues, value) {
+        const sel = document.getElementById(selectId);
+        const inp = document.getElementById(inputId);
+        const hid = document.getElementById(hiddenId);
+        if (!sel || !inp || !hid) return;
+
+        hid.value = String(value);
+
+        if (baseValues.includes(value)) {
+            sel.value = String(value);
+            inp.style.display = "none";
+            inp.value = String(value);
+        } else {
+            sel.value = "__custom__";
+            inp.style.display = "inline-block";
+            inp.value = String(value);
+        }
     }
 
     function updateProjectSelector() {
@@ -507,19 +543,6 @@
         let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
         location.reload();
-    }
-
-    // ✅ 進入編輯模式（共用，桌機 dblclick + 手機 long-press）
-    function enterEditMode(div, textEl) {
-        textEl.contentEditable = "true";
-        div.draggable = false;
-        textEl.focus();
-
-        const range = document.createRange();
-        range.selectNodeContents(textEl);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
     }
 
     function createTaskElement(name, color) {
@@ -543,80 +566,17 @@
         text.innerText = name;
         text.contentEditable = "false";
 
-        // ✅ 桌機：雙擊編輯（保留）
-        text.ondblclick = () => enterEditMode(div, text);
-
-        // ✅ 手機：長按 450ms 編輯（新增）
-        let pressTimer = null;
-        let startX = 0, startY = 0;
-        let moved = false;
-
-        function clearPressTimer() {
-            if (pressTimer) {
-                clearTimeout(pressTimer);
-                pressTimer = null;
-            }
-        }
-
-        // 用 pointer 事件（新 iOS Safari 支援），並備援 touch
-        const onPressStart = (clientX, clientY) => {
-            if (text.contentEditable === "true") return;
-            moved = false;
-            startX = clientX;
-            startY = clientY;
-            clearPressTimer();
-            pressTimer = setTimeout(() => {
-                // 若長按期間沒有明顯移動（避免拖曳時誤觸）
-                if (!moved) {
-                    // 阻止長按出現選單的副作用（盡量）
-                    enterEditMode(div, text);
-                }
-            }, 450);
+        text.ondblclick = () => {
+            text.contentEditable = "true";
+            div.draggable = false;
+            text.focus();
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
         };
 
-        const onPressMove = (clientX, clientY) => {
-            const dx = Math.abs(clientX - startX);
-            const dy = Math.abs(clientY - startY);
-            if (dx > 8 || dy > 8) {
-                moved = true;
-                clearPressTimer();
-            }
-        };
-
-        const onPressEnd = () => clearPressTimer();
-
-        // pointer events
-        text.addEventListener('pointerdown', (e) => {
-            // 只處理手指/觸控（避免滑鼠按下就觸發）
-            if (e.pointerType === 'touch') {
-                onPressStart(e.clientX, e.clientY);
-            }
-        }, { passive: true });
-
-        text.addEventListener('pointermove', (e) => {
-            if (e.pointerType === 'touch') onPressMove(e.clientX, e.clientY);
-        }, { passive: true });
-
-        text.addEventListener('pointerup', onPressEnd, { passive: true });
-        text.addEventListener('pointercancel', onPressEnd, { passive: true });
-
-        // fallback touch events (較舊環境)
-        text.addEventListener('touchstart', (e) => {
-            const t = e.touches && e.touches[0];
-            if (!t) return;
-            onPressStart(t.clientX, t.clientY);
-        }, { passive: true });
-
-        text.addEventListener('touchmove', (e) => {
-            const t = e.touches && e.touches[0];
-            if (!t) return;
-            onPressMove(t.clientX, t.clientY);
-        }, { passive: true });
-
-        text.addEventListener('touchend', onPressEnd, { passive: true });
-        text.addEventListener('touchcancel', onPressEnd, { passive: true });
-
-        // 完成編輯
         text.onblur = () => {
             text.contentEditable = "false";
             div.draggable = true;
@@ -821,10 +781,12 @@
         }
     }
 
+    // ✅ 初次示例事項：工作 / 讀書 / 運動（只在沒有任何已儲存資料時加入）
     function addDefaultExampleTasksIfEmpty() {
         const pool = document.getElementById('task-pool');
         if (!pool) return;
 
+        // 若已經有項目或已有任何專案資料，就不塞示例
         const hasAnyPool = pool.querySelector('.task-card');
         const projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         const hasAnyProjectData = projectList.some(name => localStorage.getItem('planner_v8_' + name));
@@ -877,6 +839,7 @@
             currentProjectName = last;
             switchProject();
         } else {
+            // ✅ 沒有專案時，先塞示例事項
             addDefaultExampleTasksIfEmpty();
             generateGrid();
         }
