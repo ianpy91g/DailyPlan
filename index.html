@@ -8,6 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
 
+<!-- ✅ 新增：匯出圖片用 -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 <style>
     :root {
         --primary-color: #4a90e2;
@@ -141,6 +144,10 @@
     <button class="btn btn-green" onclick="saveProject()">儲存專案</button>
     <button class="btn btn-orange" onclick="exportData()">導出 JSON</button>
     <button class="btn btn-orange" onclick="importData()">導入 JSON</button>
+
+    <!-- ✅ 新增：匯出圖片 -->
+    <button class="btn btn-orange" onclick="exportScheduleImage()">匯出圖片</button>
+
     <button class="btn btn-red" onclick="deleteProject()">刪除</button>
     <input type="file" id="import-file" style="display:none" onchange="handleFileImport(event)">
 </div>
@@ -295,7 +302,6 @@
         div.className = 'task-card';
         div.draggable = true;
         div.style.backgroundColor = color;
-        // 滑鼠懸停時顯示全名的核心：設定 title
         div.title = name; 
         
         const dot = document.createElement('div');
@@ -326,7 +332,6 @@
         text.onblur = () => {
             text.contentEditable = "false";
             div.draggable = true;
-            // 當文字被編輯後，同步更新 title 提示
             div.title = text.innerText;
             captureCurrentGrid(); 
         };
@@ -381,7 +386,6 @@
         for(let i=0; i<days; i++){
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0]; 
             const head = createHeaderCell(`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`, `span ${colsPerDay}`);
             grid.appendChild(head);
         }
@@ -454,6 +458,34 @@
         if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff';
         const res = rgb.match(/\d+/g);
         return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
+    }
+
+    <!-- ✅ 新增：匯出時間表成 PNG 圖檔 -->
+    function exportScheduleImage() {
+        // 先把 schedule 同步到 activeSchedule（避免漏存）
+        captureCurrentGrid();
+
+        const target = document.getElementById('calendar-area');
+
+        // 匯出前如果有人正在編輯文字，先結束編輯避免截圖怪異
+        const editing = document.querySelector('.task-text[contenteditable="true"]');
+        if (editing) editing.blur();
+
+        html2canvas(target, {
+            scale: 2,                 // 提高解析度
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        }).then(canvas => {
+            const link = document.createElement('a');
+            const date = new Date().toISOString().split('T')[0];
+            const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
+            link.download = `${name}_${date}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error(err);
+            alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
+        });
     }
 
     window.onload = () => {
