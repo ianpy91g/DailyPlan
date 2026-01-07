@@ -80,8 +80,6 @@
         border-top: 1px solid var(--border-color);
         border-left: 1px solid var(--border-color);
         margin-top: 10px;
-
-        /* ✅ 符合版面縮放時，以左上角為基準 */
         transform-origin: top left;
     }
 
@@ -120,16 +118,12 @@
         position: absolute; top: -5px; left: -5px; width: 25px; height: 25px; opacity: 0; cursor: pointer;
     }
 
-    .grid-header-day, .grid-header-sub, .time-label, .grid-cell {
+    .grid-header-day, .time-label, .grid-cell {
         border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
     }
     .grid-header-day {
         background: #eee; font-weight: bold; text-align: center; padding: 8px 5px;
         position: sticky; top: 0; z-index: 10; font-size: 12px;
-    }
-    .grid-header-sub {
-        background: #f9f9f9; font-size: 10px; text-align: center; color: #999;
-        position: sticky; top: 46px; z-index: 9;
     }
 
     .time-label {
@@ -188,11 +182,8 @@
     </div>
 
     <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
-
-    <!-- ✅ 新增：切換符合版面 -->
     <button id="fit-btn" class="btn btn-green" onclick="toggleFitSchedule()">符合版面</button>
 
-    <!-- source of truth -->
     <input type="hidden" id="interval" value="60">
     <input type="hidden" id="days-count" value="7">
     <input type="hidden" id="cols-per-day" value="2">
@@ -219,7 +210,11 @@
     let sourceContainerId = null;
     let isCopyMode = false;
     let currentProjectName = "預設規畫";
-    let activeSchedule = {};
+
+    // ✅ 改成用「區塊 blocks」存排程（可智慧展開）
+    // block: { id, dateKey, col, startMin, durationMin, name, color }
+    let activeBlocks = [];
+
     const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
     let colorCounter = 0;
 
@@ -231,6 +226,10 @@
 
     window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
     window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
+
+    function genId() {
+        return 'b_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
 
     function isLineInApp() {
         const ua = navigator.userAgent || "";
@@ -334,7 +333,7 @@
         }
 
         function applyAndRefresh() {
-            captureCurrentGrid();
+            captureCurrentGridToBlocks();
             generateGrid();
         }
 
@@ -366,28 +365,179 @@
         });
     }
 
+    function timeStrToMin(timeStr) {
+        const [h, m] = timeStr.split(':').map(x => parseInt(x, 10));
+        return (h * 60) + m;
+    }
+    function minToTimeStr(min) {
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    // ✅ 從目前網格（每格）壓縮成 blocks（連續格合併）
+    function captureCurrentGridToBlocks() {
+        const interval = parseInt(document.getElementById('interval').value, 10) || 60;
+
+        // 讀出所有 cell 的內容
+        const items = [];
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            const pos = cell.dataset.pos || "";
+            // pos: `${dateKey}_col${c}_${timeStr}`
+            const m = pos.match(/^(\d{4}-\d{2}-\d{2})_col(\d+)_(\d{2}:\d{2})$/);
+            if (!m) return;
+            const dateKey = m[1];
+            const col = parseInt(m[2], 10);
+            const timeStr = m[3];
+            const startMin = timeStrToMin(timeStr);
+
+            const card = cell.querySelector('.task-card');
+            if (!card) {
+                items.push({ dateKey, col, startMin, empty: true });
+                return;
+            }
+            const name = card.querySelector('.task-text')?.innerText || "";
+            const color = card.style.backgroundColor || "";
+            items.push({ dateKey, col, startMin, name, color, empty: false });
+        });
+
+        // group by dateKey+col, sort by startMin, merge consecutive same (name+color)
+        const map = new Map();
+        for (const it of items) {
+            const k = `${it.dateKey}|${it.col}`;
+            if (!map.has(k)) map.set(k, []);
+            map.get(k).push(it);
+        }
+
+        const newBlocks = [];
+        for (const [k, arr] of map.entries()) {
+            arr.sort((a,b) => a.startMin - b.startMin);
+
+            let run = null; // {dateKey,col,startMin,duration,name,color}
+            for (const it of arr) {
+                if (it.empty || !it.name) {
+                    if (run) {
+                        newBlocks.push({ id: genId(), ...run });
+                        run = null;
+                    }
+                    continue;
+                }
+
+                if (!run) {
+                    run = {
+                        dateKey: it.dateKey,
+                        col: it.col,
+                        startMin: it.startMin,
+                        durationMin: interval,
+                        name: it.name,
+                        color: it.color
+                    };
+                    continue;
+                }
+
+                const expectedNext = run.startMin + run.durationMin;
+                const isContiguous = (it.startMin === expectedNext);
+                const sameTask = (it.name === run.name && it.color === run.color);
+
+                if (isContiguous && sameTask) {
+                    run.durationMin += interval;
+                } else {
+                    newBlocks.push({ id: genId(), ...run });
+                    run = {
+                        dateKey: it.dateKey,
+                        col: it.col,
+                        startMin: it.startMin,
+                        durationMin: interval,
+                        name: it.name,
+                        color: it.color
+                    };
+                }
+            }
+            if (run) newBlocks.push({ id: genId(), ...run });
+        }
+
+        activeBlocks = newBlocks;
+    }
+
+    // ✅ 若載入舊版 schedule（每格一筆）→ 轉成 blocks
+    function legacyScheduleToBlocks(scheduleMap, legacyInterval) {
+        const interval = parseInt(legacyInterval, 10) || 60;
+
+        // scheduleMap key: `${dateKey}_col${c}_${timeStr}`
+        const items = [];
+        for (const [pos, v] of Object.entries(scheduleMap || {})) {
+            const m = pos.match(/^(\d{4}-\d{2}-\d{2})_col(\d+)_(\d{2}:\d{2})$/);
+            if (!m) continue;
+            const dateKey = m[1];
+            const col = parseInt(m[2], 10);
+            const startMin = timeStrToMin(m[3]);
+            items.push({
+                dateKey, col, startMin,
+                name: v?.name || "",
+                color: v?.color || ""
+            });
+        }
+
+        // group & merge contiguous
+        const map = new Map();
+        for (const it of items) {
+            const k = `${it.dateKey}|${it.col}`;
+            if (!map.has(k)) map.set(k, []);
+            map.get(k).push(it);
+        }
+
+        const blocks = [];
+        for (const [k, arr] of map.entries()) {
+            arr.sort((a,b) => a.startMin - b.startMin);
+
+            let run = null;
+            for (const it of arr) {
+                if (!it.name) {
+                    if (run) { blocks.push({ id: genId(), ...run }); run = null; }
+                    continue;
+                }
+                if (!run) {
+                    run = {
+                        dateKey: it.dateKey,
+                        col: it.col,
+                        startMin: it.startMin,
+                        durationMin: interval,
+                        name: it.name,
+                        color: it.color
+                    };
+                    continue;
+                }
+
+                const expectedNext = run.startMin + run.durationMin;
+                const isContiguous = (it.startMin === expectedNext);
+                const sameTask = (it.name === run.name && it.color === run.color);
+
+                if (isContiguous && sameTask) run.durationMin += interval;
+                else {
+                    blocks.push({ id: genId(), ...run });
+                    run = {
+                        dateKey: it.dateKey,
+                        col: it.col,
+                        startMin: it.startMin,
+                        durationMin: interval,
+                        name: it.name,
+                        color: it.color
+                    };
+                }
+            }
+            if (run) blocks.push({ id: genId(), ...run });
+        }
+        return blocks;
+    }
+
     function refreshTable() {
-        captureCurrentGrid();
+        captureCurrentGridToBlocks();
         generateGrid();
-        // ✅ 若目前是符合版面狀態，重畫後自動重新套用
         if (fitMode) applyFitSchedule();
     }
 
-    function captureCurrentGrid() {
-        document.querySelectorAll('.grid-cell').forEach(cell => {
-            const card = cell.querySelector('.task-card');
-            const posKey = cell.dataset.pos;
-            if (card) {
-                activeSchedule[posKey] = {
-                    name: card.querySelector('.task-text').innerText,
-                    color: card.style.backgroundColor
-                };
-            } else { delete activeSchedule[posKey]; }
-        });
-    }
-
     function exportData() {
-        captureCurrentGrid();
+        captureCurrentGridToBlocks();
 
         const exportObj = {
             projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
@@ -451,7 +601,7 @@
     }
 
     function saveProject() {
-        captureCurrentGrid();
+        captureCurrentGridToBlocks();
         const nameInput = document.getElementById('new-project-name').value.trim();
         if (nameInput) currentProjectName = nameInput;
 
@@ -469,7 +619,8 @@
                 days: document.getElementById('days-count').value,
                 cols: document.getElementById('cols-per-day').value
             },
-            schedule: activeSchedule,
+            // ✅ 新格式：blocks（智慧展開）
+            blocks: activeBlocks,
             pool: poolItems
         };
 
@@ -500,14 +651,20 @@
 
         syncSelectCustomUIFromHidden();
 
-        activeSchedule = data.schedule || {};
+        // ✅ blocks 優先；若是舊版 schedule，會自動轉換
+        if (Array.isArray(data.blocks)) {
+            activeBlocks = data.blocks;
+        } else if (data.schedule) {
+            activeBlocks = legacyScheduleToBlocks(data.schedule, data.settings?.interval);
+        } else {
+            activeBlocks = [];
+        }
 
         const pool = document.getElementById('task-pool');
         pool.innerHTML = "";
         (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
-        generateGrid();
 
-        // ✅ 規畫切換後，如果是符合版面狀態就套用
+        generateGrid();
         if (fitMode) applyFitSchedule();
     }
 
@@ -560,18 +717,33 @@
         location.reload();
     }
 
-    function createTaskElement(name, color) {
+    function createTaskElement(name, color, meta = null) {
         const div = document.createElement('div');
         div.className = 'task-card';
         div.draggable = true;
         div.style.backgroundColor = color;
         div.title = name;
 
+        if (meta && meta.blockId) {
+            div.dataset.blockId = meta.blockId;
+        }
+
         const dot = document.createElement('div');
         dot.className = 'color-dot';
         const ci = document.createElement('input');
         ci.type = 'color'; ci.value = rgbToHex(color);
-        ci.oninput = (e) => { div.style.backgroundColor = e.target.value; captureCurrentGrid(); };
+
+        ci.oninput = (e) => {
+            div.style.backgroundColor = e.target.value;
+
+            // 如果是 grid 內的卡片（有 blockId），同步更新該 block 的顏色
+            const bid = div.dataset.blockId;
+            if (bid) {
+                const b = activeBlocks.find(x => x.id === bid);
+                if (b) b.color = e.target.value;
+                generateGrid();
+            }
+        };
         ci.onmousedown = (e) => e.stopPropagation();
         dot.appendChild(ci);
         div.appendChild(dot);
@@ -596,7 +768,14 @@
             text.contentEditable = "false";
             div.draggable = true;
             div.title = text.innerText;
-            captureCurrentGrid();
+
+            // 若是 grid 內 block，改名同步回 block
+            const bid = div.dataset.blockId;
+            if (bid) {
+                const b = activeBlocks.find(x => x.id === bid);
+                if (b) b.name = text.innerText;
+                generateGrid();
+            }
         };
 
         text.onkeydown = (e) => {
@@ -609,8 +788,16 @@
         del.className = 'delete-btn'; del.innerHTML = '×';
         del.onclick = (e) => {
             e.stopPropagation();
-            const parentCell = div.closest('.grid-cell');
-            if (parentCell) delete activeSchedule[parentCell.dataset.pos];
+
+            // 如果在 grid 內：刪除整個 block（A 模式：每格都顯示文字，所以刪除等於刪整段）
+            const bid = div.dataset.blockId;
+            if (bid) {
+                activeBlocks = activeBlocks.filter(b => b.id !== bid);
+                generateGrid();
+                return;
+            }
+
+            // 否則是事項庫：移除該卡片
             div.remove();
         };
         div.appendChild(del);
@@ -635,6 +822,21 @@
         input.value = '';
     }
 
+    function blockCoversSlot(block, slotStartMin) {
+        return slotStartMin >= block.startMin && slotStartMin < (block.startMin + block.durationMin);
+    }
+
+    function removeOverlappingBlocks(dateKey, col, startMin, durationMin) {
+        const endMin = startMin + durationMin;
+        activeBlocks = activeBlocks.filter(b => {
+            if (b.dateKey !== dateKey || b.col !== col) return true;
+            const bStart = b.startMin;
+            const bEnd = b.startMin + b.durationMin;
+            const overlap = !(bEnd <= startMin || bStart >= endMin);
+            return !overlap;
+        });
+    }
+
     function generateGrid() {
         const startDateVal = document.getElementById('start-date').value;
         const startH = parseInt(document.getElementById('start-time').value, 10);
@@ -651,7 +853,7 @@
         const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         const baseDate = new Date(startDateVal);
 
-        // ✅ 第一列：日期（跨 colsPerDay 欄）
+        // ✅ 第一列：日期
         grid.appendChild(createHeaderCell(''));
         for (let i = 0; i < days; i++) {
             const d = new Date(baseDate);
@@ -663,14 +865,16 @@
             grid.appendChild(head);
         }
 
-        // ❌ 已移除第二列：欄位數字 1、2、3…（grid-header-sub）
+        // ❌ 移除第二列：欄位數字 1、2、3…
 
         const totalMinutes = (endH - startH) * 60;
         for (let m = 0; m <= totalMinutes; m += interval) {
-            const currentH = startH + Math.floor(m / 60);
-            if (currentH >= endH && m % 60 !== 0) break;
+            const currentMin = (startH * 60) + m;
+            const currentH = Math.floor(currentMin / 60);
 
-            const timeStr = `${currentH.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+            if (currentH >= endH && (currentMin % 60) !== 0) break;
+
+            const timeStr = minToTimeStr(currentMin);
             const label = document.createElement('div'); label.className = 'time-label';
             label.innerHTML = `<span class="time-text">${timeStr}</span>`;
             grid.appendChild(label);
@@ -689,9 +893,13 @@
                     cell.ondragleave = () => cell.classList.remove('drag-over');
                     cell.ondrop = (e) => handleDrop(e, cell);
 
-                    if (activeSchedule[cell.dataset.pos]) {
-                        cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
+                    // ✅ 用 blocks 渲染：只要該時間 slot 落在 block 範圍內，就顯示卡片
+                    const slotStartMin = currentMin;
+                    const b = activeBlocks.find(x => x.dateKey === dateKey && x.col === c && blockCoversSlot(x, slotStartMin));
+                    if (b) {
+                        cell.appendChild(createTaskElement(b.name, b.color, { blockId: b.id }));
                     }
+
                     grid.appendChild(cell);
                 }
             }
@@ -703,17 +911,37 @@
         cell.classList.remove('drag-over');
         if (!draggedItem) return;
 
+        // grid cell pos: `${dateKey}_col${c}_${timeStr}`
+        const pos = cell.dataset.pos || "";
+        const m = pos.match(/^(\d{4}-\d{2}-\d{2})_col(\d+)_(\d{2}:\d{2})$/);
+        if (!m) return;
+
+        const dateKey = m[1];
+        const col = parseInt(m[2], 10);
+        const timeStr = m[3];
+        const startMin = timeStrToMin(timeStr);
+
+        const interval = parseInt(document.getElementById('interval').value, 10) || 60;
+
         const name = draggedItem.querySelector('.task-text').innerText;
         const color = draggedItem.style.backgroundColor;
 
-        activeSchedule[cell.dataset.pos] = { name, color };
+        // ✅ 放入時：先移除同欄同時間段重疊的 block，然後建立一個「一格長度」block
+        removeOverlappingBlocks(dateKey, col, startMin, interval);
 
-        const newItem = (sourceContainerId === 'task-pool' || isCopyMode)
-            ? createTaskElement(name, color)
-            : draggedItem;
+        const newBlock = {
+            id: genId(),
+            dateKey,
+            col,
+            startMin,
+            durationMin: interval,
+            name,
+            color
+        };
+        activeBlocks.push(newBlock);
 
-        cell.innerHTML = '';
-        cell.appendChild(newItem);
+        // A 模式：每格都顯示同樣文字，直接重畫最穩
+        generateGrid();
     }
 
     function createHeaderCell(html, gridColumn = '') {
@@ -738,7 +966,6 @@
         const grid = document.getElementById('calendar-grid');
         if (!area || !grid) return;
 
-        // 先清掉 transform，拿到原始寬度
         grid.style.transform = 'none';
 
         requestAnimationFrame(() => {
@@ -778,13 +1005,12 @@
         updateFitButtonUI();
     }
 
-    // 視窗大小改變時：若在符合版面狀態，自動重算縮放
     window.addEventListener('resize', () => {
         if (fitMode) applyFitSchedule();
     });
 
     async function exportScheduleImage() {
-        captureCurrentGrid();
+        captureCurrentGridToBlocks();
 
         const editing = document.querySelector('.task-text[contenteditable="true"]');
         if (editing) editing.blur();
@@ -792,11 +1018,8 @@
         const grid = document.getElementById('calendar-grid');
         if (!grid) return alert('找不到 calendar-grid');
 
-        // ✅ 匯出時先暫時移除縮放，確保圖片是原尺寸（不會被 scale 影響）
         const oldTransform = grid.style.transform;
         grid.style.transform = 'none';
-
-        // 等一個 frame 讓 layout 更新
         await new Promise(res => requestAnimationFrame(res));
 
         const exportWidth = grid.scrollWidth;
@@ -853,18 +1076,15 @@
             console.error(err);
             alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
         } finally {
-            // ✅ 還原縮放狀態
             grid.style.transform = oldTransform || 'none';
             if (fitMode) applyFitSchedule();
         }
     }
 
-    // ✅ 初次示例事項：工作 / 讀書 / 運動（只在沒有任何已儲存資料時加入）
     function addDefaultExampleTasksIfEmpty() {
         const pool = document.getElementById('task-pool');
         if (!pool) return;
 
-        // 若已經有項目或已有任何規畫資料，就不塞示例
         const hasAnyPool = pool.querySelector('.task-card');
         const projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         const hasAnyProjectData = projectList.some(name => localStorage.getItem('planner_v8_' + name));
@@ -918,7 +1138,6 @@
             currentProjectName = last;
             switchProject();
         } else {
-            // ✅ 沒有規畫時，先塞示例事項
             addDefaultExampleTasksIfEmpty();
             generateGrid();
         }
