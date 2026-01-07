@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>智慧規劃表 - 懸停顯示全名版</title>
+<title>智慧規劃表</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
 
-<!-- ✅ 匯出圖片用（整張時間表） -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
@@ -45,7 +44,7 @@
 
     .setting-group { display: flex; align-items: center; gap: 3px; }
     input[type="number"], input[type="date"], select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
-    input[type="number"] { width: 50px; }
+    input[type="number"] { width: 60px; }
 
     button.btn {
         border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;
@@ -152,9 +151,7 @@
     <button class="btn btn-green" onclick="saveProject()">儲存專案</button>
     <button class="btn btn-orange" onclick="exportData()">導出 JSON</button>
     <button class="btn btn-orange" onclick="importData()">導入 JSON</button>
-
     <button class="btn btn-orange" onclick="exportScheduleImage()">匯出圖片</button>
-
     <button class="btn btn-red" onclick="deleteProject()">刪除</button>
     <input type="file" id="import-file" style="display:none" onchange="handleFileImport(event)">
 </div>
@@ -162,7 +159,6 @@
 <div id="settings-bar">
     <div class="setting-group"><label>起始:</label><input type="date" id="start-date"></div>
 
-    <!-- ✅ 時段下拉（0-24） -->
     <div class="setting-group">
         <label>時段:</label>
         <select id="start-time"></select>
@@ -170,10 +166,33 @@
         <select id="end-time"></select>
     </div>
 
-    <div class="setting-group"><label>間隔(分):</label><input type="number" id="interval" value="60" min="1"></div>
-    <div class="setting-group"><label>天數:</label><input type="number" id="days-count" value="7"></div>
-    <div class="setting-group"><label>欄位:</label><input type="number" id="cols-per-day" value="2"></div>
+    <!-- ✅ 間隔：下拉 + 自訂 -->
+    <div class="setting-group">
+        <label>間隔(分):</label>
+        <select id="interval-select"></select>
+        <input id="interval-custom" type="number" min="1" style="display:none;">
+    </div>
+
+    <!-- ✅ 天數：下拉 + 自訂 -->
+    <div class="setting-group">
+        <label>天數:</label>
+        <select id="days-select"></select>
+        <input id="days-custom" type="number" min="1" style="display:none;">
+    </div>
+
+    <!-- ✅ 欄位：下拉 + 自訂 -->
+    <div class="setting-group">
+        <label>欄位:</label>
+        <select id="cols-select"></select>
+        <input id="cols-custom" type="number" min="1" style="display:none;">
+    </div>
+
     <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
+
+    <!-- ✅ 保留隱藏的原 id（讓原本程式讀值不必大改） -->
+    <input type="hidden" id="interval" value="60">
+    <input type="hidden" id="days-count" value="7">
+    <input type="hidden" id="cols-per-day" value="2">
 </div>
 
 <div id="main-container">
@@ -190,10 +209,7 @@
 </div>
 
 <script>
-    // ✅ mobile drag-drop polyfill
     MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
-
-    // ✅ 某些 iOS Safari / in-app browser 需要（讓拖曳行為更穩）
     window.addEventListener('touchmove', function () {}, { passive: false });
 
     let draggedItem = null;
@@ -209,13 +225,10 @@
     window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
     window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
 
-    // ✅ 偵測 LINE 內建瀏覽器
     function isLineInApp() {
         const ua = navigator.userAgent || "";
         return ua.includes("Line/");
     }
-
-    // ✅ 可選：提示（若你覺得太煩可以註解掉）
     function maybeShowLineHint() {
         if (!isLineInApp()) return;
         if (sessionStorage.getItem('line_hint_shown') === '1') return;
@@ -223,14 +236,12 @@
         alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
     }
 
-    // ✅ 0-24 時段下拉初始化 + 防呆（end > start）
-    // ✅ 修正：避免初始被 select 預設成 0，第一次強制 6-22
+    // ---------- 時段（保持原本：0-24 下拉，預設 6-22） ----------
     function populateTimeSelects() {
         const startSel = document.getElementById('start-time');
         const endSel = document.getElementById('end-time');
         if (!startSel || !endSel) return;
 
-        // 只建立一次選項
         if (startSel.options.length === 0) {
             for (let h = 0; h <= 24; h++) {
                 const o1 = document.createElement('option');
@@ -245,7 +256,6 @@
             }
         }
 
-        // ✅ 關鍵：第一次初始化時強制預設 6-22（避免 0-1）
         if (!startSel.dataset.defaultsApplied) {
             startSel.value = "6";
             endSel.value = "22";
@@ -262,7 +272,6 @@
             }
         }
 
-        // 只綁一次事件（避免重複 refresh）
         if (!startSel.dataset.bound) {
             startSel.dataset.bound = "1";
             startSel.addEventListener('change', () => { normalize(); refreshTable(); });
@@ -271,11 +280,105 @@
             endSel.dataset.bound = "1";
             endSel.addEventListener('change', () => { normalize(); refreshTable(); });
         }
-
         normalize();
     }
 
-    function refreshTable() { captureCurrentGrid(); generateGrid(); }
+    // ---------- 通用：下拉 + 自訂 input（同步到 hidden input） ----------
+    function initSelectWithCustom(opts) {
+        const {
+            selectId, inputId, hiddenId,
+            baseValues, defaultValue,
+            min = 1, max = 9999,
+            onChange = () => refreshTable()
+        } = opts;
+
+        const sel = document.getElementById(selectId);
+        const inp = document.getElementById(inputId);
+        const hid = document.getElementById(hiddenId);
+        if (!sel || !inp || !hid) return;
+
+        // build options
+        sel.innerHTML = "";
+        baseValues.forEach(v => {
+            const o = document.createElement('option');
+            o.value = String(v);
+            o.textContent = String(v);
+            sel.appendChild(o);
+        });
+        const customOpt = document.createElement('option');
+        customOpt.value = "__custom__";
+        customOpt.textContent = "自訂";
+        sel.appendChild(customOpt);
+
+        // set default
+        hid.value = String(defaultValue);
+        inp.min = String(min);
+        inp.max = String(max);
+        inp.value = String(defaultValue);
+
+        // select default if in base list; else choose custom
+        if (baseValues.includes(defaultValue)) {
+            sel.value = String(defaultValue);
+            inp.style.display = "none";
+        } else {
+            sel.value = "__custom__";
+            inp.style.display = "inline-block";
+        }
+
+        function clamp(n) {
+            if (isNaN(n)) return null;
+            return Math.max(min, Math.min(max, n));
+        }
+
+        function syncFromSelect() {
+            if (sel.value === "__custom__") {
+                inp.style.display = "inline-block";
+                inp.focus();
+                // keep current hid as input
+                inp.value = hid.value || inp.value;
+            } else {
+                inp.style.display = "none";
+                hid.value = sel.value;
+                onChange();
+            }
+        }
+
+        function syncFromInput() {
+            const v = clamp(parseInt(inp.value, 10));
+            if (v === null) return;
+            inp.value = String(v);
+            hid.value = String(v);
+            onChange();
+        }
+
+        sel.addEventListener('change', syncFromSelect);
+        inp.addEventListener('change', syncFromInput);
+        inp.addEventListener('blur', syncFromInput);
+
+        // allow Enter to apply
+        inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                inp.blur();
+            }
+        });
+    }
+
+    // ---------- 把目前 UI 選擇同步到 hidden（避免 refreshTable 前後不一致） ----------
+    function syncUIToHidden() {
+        const intervalH = document.getElementById('interval');
+        const daysH = document.getElementById('days-count');
+        const colsH = document.getElementById('cols-per-day');
+
+        // 這三個 hidden 是 source of truth（initSelectWithCustom 會維護）
+        if (!intervalH || !daysH || !colsH) return;
+    }
+
+    function refreshTable() {
+        syncUIToHidden();
+        captureCurrentGrid();
+        generateGrid();
+    }
 
     function captureCurrentGrid() {
         document.querySelectorAll('.grid-cell').forEach(cell => {
@@ -290,7 +393,7 @@
         });
     }
 
-    // ✅ JSON 匯出：一般瀏覽器下載；LINE 內建瀏覽器改「複製 JSON」
+    // ---------- 匯出/導入/儲存/切換（延用原本邏輯，只有讀值來源改 hidden） ----------
     function exportData() {
         captureCurrentGrid();
 
@@ -392,26 +495,84 @@
         if (!sel.value) return;
         currentProjectName = sel.value;
         const data = JSON.parse(localStorage.getItem('planner_v8_' + currentProjectName));
-        if (data) {
-            document.getElementById('start-date').value = data.settings.date;
-            document.getElementById('start-time').value = data.settings.start;
-            document.getElementById('end-time').value = data.settings.end;
-            document.getElementById('interval').value = data.settings.interval;
-            document.getElementById('days-count').value = data.settings.days;
-            document.getElementById('cols-per-day').value = data.settings.cols;
+        if (!data) return;
 
-            // ✅ 套用防呆（end > start），不會覆蓋專案的 start/end
-            populateTimeSelects();
+        document.getElementById('start-date').value = data.settings.date;
+        document.getElementById('start-time').value = data.settings.start;
+        document.getElementById('end-time').value = data.settings.end;
 
-            activeSchedule = data.schedule || {};
+        // 時段防呆
+        populateTimeSelects();
 
-            const pool = document.getElementById('task-pool');
-            pool.innerHTML = "";
-            (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
-            generateGrid();
+        // ✅ 讀回 interval/days/cols → 寫入 hidden
+        document.getElementById('interval').value = String(parseInt(data.settings.interval, 10) || 60);
+        document.getElementById('days-count').value = String(parseInt(data.settings.days, 10) || 7);
+        document.getElementById('cols-per-day').value = String(parseInt(data.settings.cols, 10) || 2);
+
+        // ✅ 同步 UI（select + custom input）
+        syncSelectCustomUIFromHidden();
+
+        activeSchedule = data.schedule || {};
+
+        const pool = document.getElementById('task-pool');
+        pool.innerHTML = "";
+        (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
+        generateGrid();
+    }
+
+    function syncSelectCustomUIFromHidden() {
+        // interval
+        const iv = parseInt(document.getElementById('interval').value, 10) || 60;
+        setSelectCustomValue('interval-select', 'interval-custom', 'interval', [5,10,15,30,60,120], iv);
+
+        // days
+        const dy = parseInt(document.getElementById('days-count').value, 10) || 7;
+        setSelectCustomValue('days-select', 'days-custom', 'days-count', [1,3,5,7,14,21,30], dy);
+
+        // cols
+        const co = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
+        setSelectCustomValue('cols-select', 'cols-custom', 'cols-per-day', [1,2,3,4,5], co);
+    }
+
+    function setSelectCustomValue(selectId, inputId, hiddenId, baseValues, value) {
+        const sel = document.getElementById(selectId);
+        const inp = document.getElementById(inputId);
+        const hid = document.getElementById(hiddenId);
+        if (!sel || !inp || !hid) return;
+
+        hid.value = String(value);
+
+        if (baseValues.includes(value)) {
+            sel.value = String(value);
+            inp.style.display = "none";
+            inp.value = String(value);
+        } else {
+            sel.value = "__custom__";
+            inp.style.display = "inline-block";
+            inp.value = String(value);
         }
     }
 
+    function updateProjectSelector() {
+        const sel = document.getElementById('project-selector');
+        const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        sel.innerHTML = '<option value="">-- 選擇專案 --</option>';
+        list.forEach(name => {
+            const opt = document.createElement('option'); opt.value = name; opt.text = name;
+            if (name === currentProjectName) opt.selected = true;
+            sel.add(opt);
+        });
+    }
+
+    function deleteProject() {
+        if (!confirm(`確定刪除？`)) return;
+        localStorage.removeItem('planner_v8_' + currentProjectName);
+        let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
+        location.reload();
+    }
+
+    // ---------- Task 元件 ----------
     function createTaskElement(name, color) {
         const div = document.createElement('div');
         div.className = 'task-card';
@@ -470,10 +631,7 @@
         div.addEventListener('dragstart', (e) => {
             draggedItem = div;
             sourceContainerId = div.parentElement.id;
-
-            // ✅ 關鍵：手機/不同瀏覽器更穩（尤其 polyfill）
             try { e.dataTransfer.setData('text/plain', '1'); } catch (_) {}
-
             if (!isCopyMode) div.style.opacity = '0.4';
         });
 
@@ -490,13 +648,16 @@
         input.value = '';
     }
 
+    // ---------- Grid ----------
     function generateGrid() {
         const startDateVal = document.getElementById('start-date').value;
         const startH = parseInt(document.getElementById('start-time').value, 10);
         const endH = parseInt(document.getElementById('end-time').value, 10);
+
+        // ✅ 改成讀 hidden（由 select/custom 控制）
         const interval = parseInt(document.getElementById('interval').value, 10) || 60;
-        const days = parseInt(document.getElementById('days-count').value, 10);
-        const colsPerDay = parseInt(document.getElementById('cols-per-day').value, 10);
+        const days = parseInt(document.getElementById('days-count').value, 10) || 7;
+        const colsPerDay = parseInt(document.getElementById('cols-per-day').value, 10) || 2;
 
         const grid = document.getElementById('calendar-grid');
         grid.innerHTML = '';
@@ -539,7 +700,6 @@
                     cell.className = 'grid-cell';
                     cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
 
-                    // ✅ 手機拖放必備：dragenter + preventDefault()
                     cell.ondragenter = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
                     cell.ondragover  = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
                     cell.ondragleave = () => cell.classList.remove('drag-over');
@@ -580,34 +740,13 @@
         return div;
     }
 
-    function updateProjectSelector() {
-        const sel = document.getElementById('project-selector');
-        const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-        sel.innerHTML = '<option value="">-- 選擇專案 --</option>';
-        list.forEach(name => {
-            const opt = document.createElement('option'); opt.value = name; opt.text = name;
-            if (name === currentProjectName) opt.selected = true;
-            sel.add(opt);
-        });
-    }
-
-    function deleteProject() {
-        if (!confirm(`確定刪除？`)) return;
-        localStorage.removeItem('planner_v8_' + currentProjectName);
-        let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-        localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
-        location.reload();
-    }
-
     function rgbToHex(rgb) {
         if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff';
         const res = rgb.match(/\d+/g);
         return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
     }
 
-    // ✅ 匯出「整張」時間表成單張 PNG：
-    // - 一般瀏覽器：直接下載
-    // - LINE 內建瀏覽器：優先 Web Share；不行就開新頁顯示圖片讓使用者長按存圖
+    // ---------- 匯出圖片（整張） ----------
     async function exportScheduleImage() {
         captureCurrentGrid();
 
@@ -673,14 +812,51 @@
         }
     }
 
+    // ---------- 初始化 ----------
     window.onload = () => {
         populateTimeSelects();
-        updateProjectSelector();
         maybeShowLineHint();
 
+        // ✅ 初始化：間隔/天數/欄位（下拉 + 自訂）→ 同步到 hidden
+        initSelectWithCustom({
+            selectId: "interval-select",
+            inputId: "interval-custom",
+            hiddenId: "interval",
+            baseValues: [5, 10, 15, 30, 60, 120],
+            defaultValue: 60,
+            min: 1,
+            max: 1440
+        });
+
+        initSelectWithCustom({
+            selectId: "days-select",
+            inputId: "days-custom",
+            hiddenId: "days-count",
+            baseValues: [1, 3, 5, 7, 14, 21, 30],
+            defaultValue: 7,
+            min: 1,
+            max: 365
+        });
+
+        initSelectWithCustom({
+            selectId: "cols-select",
+            inputId: "cols-custom",
+            hiddenId: "cols-per-day",
+            baseValues: [1, 2, 3, 4, 5],
+            defaultValue: 2,
+            min: 1,
+            max: 30
+        });
+
+        updateProjectSelector();
+
         const last = localStorage.getItem('planner_last_active');
-        if (last) { currentProjectName = last; switchProject(); }
-        else { generateGrid(); }
+        if (last) {
+            currentProjectName = last;
+            switchProject();
+        } else {
+            generateGrid();
+        }
     };
 </script>
 </body>
