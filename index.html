@@ -462,31 +462,49 @@
 
     <!-- ✅ 新增：匯出時間表成 PNG 圖檔 -->
     function exportScheduleImage() {
-        // 先把 schedule 同步到 activeSchedule（避免漏存）
-        captureCurrentGrid();
+    // 先同步資料，避免畫面與 activeSchedule 不一致
+    captureCurrentGrid();
 
-        const target = document.getElementById('calendar-area');
+    // 若有人正在編輯文字，先結束編輯避免截圖怪異
+    const editing = document.querySelector('.task-text[contenteditable="true"]');
+    if (editing) editing.blur();
 
-        // 匯出前如果有人正在編輯文字，先結束編輯避免截圖怪異
-        const editing = document.querySelector('.task-text[contenteditable="true"]');
-        if (editing) editing.blur();
+    // ✅ 重點：截整張表格本體（包含所有欄列）
+    const grid = document.getElementById('calendar-grid');
+    if (!grid) return alert('找不到 calendar-grid');
 
-        html2canvas(target, {
-            scale: 2,                 // 提高解析度
-            useCORS: true,
-            backgroundColor: '#ffffff'
-        }).then(canvas => {
-            const link = document.createElement('a');
-            const date = new Date().toISOString().split('T')[0];
-            const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
-            link.download = `${name}_${date}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }).catch(err => {
-            console.error(err);
-            alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
-        });
-    }
+    // 計算整張表格的實際尺寸（包含超出可視區的部分）
+    const exportWidth = grid.scrollWidth;
+    const exportHeight = grid.scrollHeight;
+
+    html2canvas(grid, {
+        backgroundColor: '#ffffff',
+        scale: 2,                 // 解析度（可改 3 更清楚，但檔案會更大）
+        useCORS: true,
+
+        // ✅ 關鍵：強制用完整尺寸截圖
+        width: exportWidth,
+        height: exportHeight,
+        windowWidth: exportWidth,
+        windowHeight: exportHeight,
+
+        // ✅ 關鍵：避免受當前捲動位置影響
+        scrollX: 0,
+        scrollY: 0
+    }).then(canvas => {
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
+
+        link.download = `${name}_${date}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        console.error(err);
+        alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
+    });
+}
+
 
     window.onload = () => {
         updateProjectSelector();
@@ -497,3 +515,4 @@
 
 </body>
 </html>
+
