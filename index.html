@@ -225,37 +225,56 @@
     }
 
     // ✅ 0-24 時段下拉初始化 + 防呆（end > start）
-    function populateTimeSelects() {
-        const startSel = document.getElementById('start-time');
-        const endSel = document.getElementById('end-time');
-        if (!startSel || !endSel) return;
+   function populateTimeSelects() {
+    const startSel = document.getElementById('start-time');
+    const endSel = document.getElementById('end-time');
+    if (!startSel || !endSel) return;
 
-        if (startSel.options.length === 0) {
-            for (let h = 0; h <= 24; h++) {
-                const o1 = document.createElement('option');
-                o1.value = String(h);
-                o1.textContent = String(h);
-                startSel.appendChild(o1);
+    // 只建立一次選項
+    if (startSel.options.length === 0) {
+        for (let h = 0; h <= 24; h++) {
+            const o1 = document.createElement('option');
+            o1.value = String(h);
+            o1.textContent = String(h);
+            startSel.appendChild(o1);
 
-                const o2 = document.createElement('option');
-                o2.value = String(h);
-                o2.textContent = String(h);
-                endSel.appendChild(o2);
-            }
+            const o2 = document.createElement('option');
+            o2.value = String(h);
+            o2.textContent = String(h);
+            endSel.appendChild(o2);
         }
+    }
 
-        // 預設值（沿用原本 6-22）
-        if (!startSel.value) startSel.value = "6";
-        if (!endSel.value) endSel.value = "22";
+    // ✅ 關鍵：第一次初始化時，強制預設 6-22（避免 select 預設卡在 0）
+    if (!startSel.dataset.defaultsApplied) {
+        startSel.value = "6";
+        endSel.value = "22";
+        startSel.dataset.defaultsApplied = "1";
+        endSel.dataset.defaultsApplied = "1";
+    }
 
-        function normalize() {
-            const s = parseInt(startSel.value, 10);
-            let e = parseInt(endSel.value, 10);
-            if (e <= s) {
-                e = Math.min(24, s + 1);
-                endSel.value = String(e);
-            }
+    function normalize() {
+        const s = parseInt(startSel.value, 10);
+        let e = parseInt(endSel.value, 10);
+        if (e <= s) {
+            e = Math.min(24, s + 1);
+            endSel.value = String(e);
         }
+    }
+
+    // 只綁一次事件（避免重複 refresh）
+    if (!startSel.dataset.bound) {
+        startSel.dataset.bound = "1";
+        startSel.addEventListener('change', () => { normalize(); refreshTable(); });
+    }
+    if (!endSel.dataset.bound) {
+        endSel.dataset.bound = "1";
+        endSel.addEventListener('change', () => { normalize(); refreshTable(); });
+    }
+
+    normalize();
+}
+
 
         // 只綁一次事件（避免重複 refresh）
         if (!startSel.dataset.bound) {
@@ -680,4 +699,5 @@
 </script>
 </body>
 </html>
+
 
