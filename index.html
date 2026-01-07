@@ -74,11 +74,15 @@
     #task-pool .task-card { height: var(--slot-height); flex-shrink: 0; }
 
     #calendar-area { flex: 1; overflow: auto; padding: 10px; background: white; }
+
     #calendar-grid {
         display: grid;
         border-top: 1px solid var(--border-color);
         border-left: 1px solid var(--border-color);
         margin-top: 10px;
+
+        /* ✅ 符合版面縮放時，以左上角為基準 */
+        transform-origin: top left;
     }
 
     .task-card {
@@ -186,6 +190,9 @@
 
     <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
 
+    <!-- ✅ 新增：切換符合版面 -->
+    <button id="fit-btn" class="btn btn-orange" onclick="toggleFitSchedule()">符合版面</button>
+
     <!-- source of truth -->
     <input type="hidden" id="interval" value="60">
     <input type="hidden" id="days-count" value="7">
@@ -216,6 +223,10 @@
     let activeSchedule = {};
     const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
     let colorCounter = 0;
+
+    // ✅ 符合版面狀態
+    let fitMode = false;
+    let lastFitScale = 1;
 
     document.getElementById('start-date').valueAsDate = new Date();
 
@@ -359,6 +370,8 @@
     function refreshTable() {
         captureCurrentGrid();
         generateGrid();
+        // ✅ 若目前是符合版面狀態，重畫後自動重新套用
+        if (fitMode) applyFitSchedule();
     }
 
     function captureCurrentGrid() {
@@ -494,6 +507,9 @@
         pool.innerHTML = "";
         (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
         generateGrid();
+
+        // ✅ 專案切換後，如果是符合版面狀態就套用
+        if (fitMode) applyFitSchedule();
     }
 
     function syncSelectCustomUIFromHidden() {
@@ -716,6 +732,59 @@
         return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
     }
 
+    // =========================
+    // ✅ 符合版面（切換）功能
+    // =========================
+    function applyFitSchedule() {
+        const area = document.getElementById('calendar-area');
+        const grid = document.getElementById('calendar-grid');
+        if (!area || !grid) return;
+
+        // 先清掉 transform，拿到原始寬度
+        grid.style.transform = 'none';
+
+        requestAnimationFrame(() => {
+            const availableWidth = area.clientWidth;
+            const contentWidth = grid.scrollWidth;
+
+            if (!availableWidth || !contentWidth) return;
+
+            const scale = Math.min(1, availableWidth / contentWidth);
+            lastFitScale = scale;
+
+            grid.style.transform = `scale(${scale})`;
+            area.scrollLeft = 0;
+            area.scrollTop = 0;
+        });
+    }
+
+    function clearFitSchedule() {
+        const grid = document.getElementById('calendar-grid');
+        const area = document.getElementById('calendar-area');
+        if (!grid || !area) return;
+        grid.style.transform = 'none';
+        area.scrollLeft = 0;
+        area.scrollTop = 0;
+    }
+
+    function updateFitButtonUI() {
+        const btn = document.getElementById('fit-btn');
+        if (!btn) return;
+        btn.textContent = fitMode ? "恢復原大小" : "符合版面";
+    }
+
+    function toggleFitSchedule() {
+        fitMode = !fitMode;
+        if (fitMode) applyFitSchedule();
+        else clearFitSchedule();
+        updateFitButtonUI();
+    }
+
+    // 視窗大小改變時：若在符合版面狀態，自動重算縮放
+    window.addEventListener('resize', () => {
+        if (fitMode) applyFitSchedule();
+    });
+
     async function exportScheduleImage() {
         captureCurrentGrid();
 
@@ -724,6 +793,13 @@
 
         const grid = document.getElementById('calendar-grid');
         if (!grid) return alert('找不到 calendar-grid');
+
+        // ✅ 匯出時先暫時移除縮放，確保圖片是原尺寸（不會被 scale 影響）
+        const oldTransform = grid.style.transform;
+        grid.style.transform = 'none';
+
+        // 等一個 frame 讓 layout 更新
+        await new Promise(res => requestAnimationFrame(res));
 
         const exportWidth = grid.scrollWidth;
         const exportHeight = grid.scrollHeight;
@@ -778,6 +854,10 @@
         } catch (err) {
             console.error(err);
             alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
+        } finally {
+            // ✅ 還原縮放狀態
+            grid.style.transform = oldTransform || 'none';
+            if (fitMode) applyFitSchedule();
         }
     }
 
@@ -833,6 +913,7 @@
         });
 
         updateProjectSelector();
+        updateFitButtonUI();
 
         const last = localStorage.getItem('planner_last_active');
         if (last) {
