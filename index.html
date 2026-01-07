@@ -651,20 +651,19 @@
         const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         const baseDate = new Date(startDateVal);
 
+        // ✅ 第一列：日期（跨 colsPerDay 欄）
         grid.appendChild(createHeaderCell(''));
         for (let i = 0; i < days; i++) {
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() + i);
-            const head = createHeaderCell(`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`, `span ${colsPerDay}`);
+            const head = createHeaderCell(
+                `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`,
+                `span ${colsPerDay}`
+            );
             grid.appendChild(head);
         }
 
-        grid.appendChild(createHeaderCell(''));
-        for (let i = 0; i < days * colsPerDay; i++) {
-            const sub = document.createElement('div');
-            sub.className = 'grid-header-sub'; sub.innerText = (i % colsPerDay) + 1;
-            grid.appendChild(sub);
-        }
+        // ❌ 已移除第二列：欄位數字 1、2、3…（grid-header-sub）
 
         const totalMinutes = (endH - startH) * 60;
         for (let m = 0; m <= totalMinutes; m += interval) {
@@ -927,9 +926,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
