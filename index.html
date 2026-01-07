@@ -214,7 +214,7 @@
         // 只提示一次
         if (sessionStorage.getItem('line_hint_shown') === '1') return;
         sessionStorage.setItem('line_hint_shown', '1');
-        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
+        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右下(上)角「⋯」→ 在外部瀏覽器開啟。");
     }
 
     function refreshTable() { captureCurrentGrid(); generateGrid(); }
@@ -629,3 +629,4 @@
 </script>
 </body>
 </html>
+
