@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>座標強化版-記憶規劃表</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>智慧規劃表 - 懸停顯示全名版</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/scroll-behaviour.min.js"></script>
@@ -11,200 +11,457 @@
 <style>
     :root {
         --primary-color: #4a90e2;
+        --save-color: #2ecc71;
+        --delete-color: #e74c3c;
         --bg-color: #f4f6f8;
         --border-color: #ddd;
-        --slot-height: 80px; /* 進一步加大格子，增加觸控容錯率 */
+        --slot-height: 50px; 
     }
 
     body {
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         margin: 0; padding: 0; height: 100vh;
         display: flex; flex-direction: column;
-        background-color: var(--bg-color);
-        overflow: hidden; 
-        touch-action: none; 
+        background-color: var(--bg-color); overflow: hidden;
     }
 
-    /* 頂部控制列優化 */
-    #project-bar, #settings-bar {
+    #project-bar {
+        background: #333; color: white; padding: 8px 12px;
+        display: flex; gap: 10px; align-items: center; flex-wrap: wrap; z-index: 100;
+    }
+    #project-bar input, #project-bar select { padding: 5px; border-radius: 4px; border: none; }
+    
+    #settings-bar {
         background: #fff; padding: 10px;
-        display: flex; gap: 8px; overflow-x: auto;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        display: flex; gap: 8px; flex-wrap: wrap;
+        align-items: center; z-index: 10; font-size: 13px;
         border-bottom: 1px solid var(--border-color);
-        z-index: 100;
-    }
-
-    #main-container { display: flex; flex: 1; overflow: hidden; flex-direction: column; }
-
-    /* 事項池：改為大方塊，方便抓取 */
-    #sidebar {
-        height: 140px; background: #eee;
-        display: flex; flex-direction: column; padding: 10px;
-    }
-    #task-pool { 
-        flex: 1; display: flex; gap: 15px; 
-        overflow-x: auto; padding: 10px 5px;
-        align-items: center;
-    }
-
-    #calendar-area { 
-        flex: 1; overflow: auto; background: white; 
-        touch-action: pan-x pan-y;
-        -webkit-overflow-scrolling: touch;
-    }
-    #calendar-grid { display: grid; border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color); }
-
-    .task-card {
-        min-width: 100px; height: 50px; border-radius: 8px;
-        color: #000; font-size: 14px; cursor: grab;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-        user-select: none; position: relative;
-        display: flex; align-items: center; font-weight: bold;
-        touch-action: none; 
-        background: white; border: 1px solid rgba(0,0,0,0.1);
     }
     
-    .task-text { padding: 0 10px; flex: 1; pointer-events: none; } /* 防止文字干擾拖放 */
+    .setting-group { display: flex; align-items: center; gap: 3px; }
+    input[type="number"], input[type="date"] { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
+    input[type="number"] { width: 50px; }
 
-    /* 格子感應強化 */
-    .grid-cell { 
-        height: var(--slot-height); 
-        border-right: 1px solid var(--border-color); 
-        border-bottom: 1px solid var(--border-color);
-        position: relative;
+    button.btn {
+        border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; color: white; font-weight: bold;
+    }
+    .btn-blue { background-color: var(--primary-color); }
+    .btn-green { background-color: var(--save-color); }
+    .btn-red { background-color: var(--delete-color); }
+    .btn-orange { background-color: #f39c12; }
+
+    #main-container { display: flex; flex: 1; overflow: hidden; }
+
+    #sidebar {
+        width: 250px; background: #fff; border-right: 1px solid var(--border-color);
+        display: flex; flex-direction: column; padding: 10px; z-index: 5;
+    }
+
+    .sidebar-title { font-size: 14px; font-weight: bold; color: #555; border-left: 4px solid var(--primary-color); padding-left: 8px; margin-bottom: 10px; }
+
+    #task-pool { 
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; 
+        padding: 8px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;
+    }
+    #task-pool .task-card { height: var(--slot-height); flex-shrink: 0; }
+
+    #calendar-area { flex: 1; overflow: auto; padding: 10px; background: white; }
+    #calendar-grid { 
+        display: grid; 
+        border-top: 1px solid var(--border-color); 
+        border-left: 1px solid var(--border-color);
+        margin-top: 10px;
+    }
+
+    .task-card {
+        width: 100%; height: 100%; border-radius: 3px;
+        color: #000; font-size: 12px; cursor: grab;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        user-select: none; position: relative; touch-action: none;
+        display: flex; align-items: center; overflow: hidden; font-weight: 500;
         box-sizing: border-box;
     }
     
-    /* 增加一個隱形的感應擴張層 */
-    .grid-cell::after {
-        content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 1;
+    .task-text { 
+        padding: 4px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+        cursor: inherit; border-radius: 2px;
+    }
+    
+    .task-text[contenteditable="true"] {
+        background: white; cursor: text; outline: 2px solid var(--primary-color);
+        white-space: normal; overflow: visible;
     }
 
-    .grid-cell.drag-over { 
-        background-color: #e3f2fd !important; 
-        box-shadow: inset 0 0 10px var(--primary-color);
+    .delete-btn {
+        position: absolute; top: 0; right: 0; background: rgba(0,0,0,0.1);
+        color: #000; width: 16px; height: 16px; font-size: 12px;
+        text-align: center; cursor: pointer; display: none;
+    }
+    .task-card:hover .delete-btn { display: block; }
+
+    .color-dot {
+        width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2);
+        margin: 0 4px; position: relative; overflow: hidden; flex-shrink: 0;
+    }
+    .color-dot input[type="color"] {
+        position: absolute; top: -5px; left: -5px; width: 25px; height: 25px; opacity: 0; cursor: pointer;
     }
 
-    .grid-header-day { background: #333; color: white; padding: 10px; position: sticky; top: 0; z-index: 10; text-align: center; }
-    .time-label { background: #f0f0f0; width: 50px; font-size: 12px; position: sticky; left: 0; z-index: 9; display: flex; align-items: center; justify-content: center; border-right: 2px solid #ccc; }
+    .grid-header-day, .grid-header-sub, .time-label, .grid-cell {
+        border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+    }
+    .grid-header-day { 
+        background: #eee; font-weight: bold; text-align: center; padding: 8px 5px; 
+        position: sticky; top: 0; z-index: 10; font-size: 12px;
+    }
+    .grid-header-sub { background: #f9f9f9; font-size: 10px; text-align: center; color: #999; position: sticky; top: 46px; z-index: 9; }
+    
+    .time-label { 
+        background: #f9f9f9; font-size: 11px; color: #333; 
+        text-align: right; padding-right: 8px; 
+        position: sticky; left: 0; z-index: 8; 
+        height: var(--slot-height); 
+        display: flex; align-items: flex-start;
+        justify-content: flex-end;
+    }
+    .time-text { transform: translateY(-50%); background: #f9f9f9; padding: 0 2px; }
+
+    .grid-cell { height: var(--slot-height); background: #fff; position: relative; padding: 1px; box-sizing: border-box; }
+    .grid-cell.drag-over { background-color: #e3f2fd; }
+
 </style>
 </head>
 <body>
 
 <div id="project-bar">
+    <span>專案:</span>
     <select id="project-selector" onchange="switchProject()"></select>
-    <button onclick="saveProject()">儲存</button>
+    <input type="text" id="new-project-name" placeholder="新名稱">
+    <button class="btn btn-green" onclick="saveProject()">儲存專案</button>
+    <button class="btn btn-orange" onclick="exportData()">導出 JSON</button>
+    <button class="btn btn-orange" onclick="importData()">導入 JSON</button>
+    <button class="btn btn-red" onclick="deleteProject()">刪除</button>
+    <input type="file" id="import-file" style="display:none" onchange="handleFileImport(event)">
+</div>
+
+<div id="settings-bar">
+    <div class="setting-group"><label>起始:</label><input type="date" id="start-date"></div>
+    <div class="setting-group"><label>時段:</label><input type="number" id="start-time" value="6">-<input type="number" id="end-time" value="22"></div>
+    <div class="setting-group"><label>間隔(分):</label><input type="number" id="interval" value="60" min="1"></div>
+    <div class="setting-group"><label>天數:</label><input type="number" id="days-count" value="7"></div>
+    <div class="setting-group"><label>欄位:</label><input type="number" id="cols-per-day" value="2"></div>
+    <button class="btn btn-blue" onclick="refreshTable()">更新表格</button>
 </div>
 
 <div id="main-container">
     <div id="sidebar">
-        <div style="display:flex; gap:5px;">
-            <input type="text" id="new-task-name" placeholder="新事項">
-            <button onclick="addNewTaskManual()">新增</button>
+        <div class="sidebar-title">事項池 (支援空白批次)</div>
+        <div id="task-creator" style="display:flex; gap:2px; margin-bottom:10px;">
+            <input type="text" id="new-task-name" placeholder="事項名稱" style="flex:1; border:1px solid #ccc; padding:5px; border-radius:4px; font-size:12px;">
+            <button class="btn btn-blue" onclick="addNewTaskManual()">增加</button>
         </div>
         <div id="task-pool"></div>
     </div>
-    <div id="calendar-area">
-        <div id="calendar-grid"></div>
-    </div>
+    <div id="calendar-area"><div id="calendar-grid"></div></div>
 </div>
 
 <script>
-    // 關鍵設定：強制設定拖曳時的座標偏移修正
-    MobileDragDrop.polyfill({
-        holdToDrag: 300, // 長按 300 毫秒才觸發拖放，避免跟捲動衝突
-        dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
-    });
-
+    MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
+    
     let draggedItem = null;
+    let sourceContainerId = null;
+    let isCopyMode = false;
+    let currentProjectName = "預設專案";
+    let activeSchedule = {}; 
+    const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
+    let colorCounter = 0;
 
-    // 核心修正：手動判定位置
-    function onDrop(e) {
-        e.preventDefault();
-        const cell = e.currentTarget;
-        cell.classList.remove('drag-over');
-        
-        if (!draggedItem) return;
+    document.getElementById('start-date').valueAsDate = new Date();
 
-        // 如果是從池子拉出來的，就複製一個；如果是格子間移動，就移動本體
-        let finalItem;
-        if (draggedItem.parentElement.id === 'task-pool') {
-            finalItem = createTaskElement(
-                draggedItem.querySelector('.task-text').innerText, 
-                draggedItem.style.backgroundColor
-            );
-        } else {
-            finalItem = draggedItem;
-        }
-        
-        cell.innerHTML = '';
-        cell.appendChild(finalItem);
+    window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
+    window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
+
+    function refreshTable() { captureCurrentGrid(); generateGrid(); }
+
+    function captureCurrentGrid() {
+        document.querySelectorAll('.grid-cell').forEach(cell => {
+            const card = cell.querySelector('.task-card');
+            const posKey = cell.dataset.pos;
+            if (card) {
+                activeSchedule[posKey] = {
+                    name: card.querySelector('.task-text').innerText,
+                    color: card.style.backgroundColor
+                };
+            } else { delete activeSchedule[posKey]; }
+        });
     }
 
+    function exportData() {
+        captureCurrentGrid();
+        const exportObj = {
+            projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
+            projects: {}
+        };
+        exportObj.projectList.forEach(name => {
+            const data = localStorage.getItem('planner_v8_' + name);
+            if (data) exportObj.projects[name] = JSON.parse(data);
+        });
+        const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `planner_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+
+    function importData() { document.getElementById('import-file').click(); }
+
+    function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.projectList && imported.projects) {
+                    if (confirm("導入將合併現有專案，確定嗎？")) {
+                        let currentList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+                        imported.projectList.forEach(name => {
+                            if (!currentList.includes(name)) currentList.push(name);
+                            localStorage.setItem('planner_v8_' + name, JSON.stringify(imported.projects[name]));
+                        });
+                        localStorage.setItem('planner_project_list', JSON.stringify(currentList));
+                        location.reload();
+                    }
+                }
+            } catch (err) { alert("格式錯誤。"); }
+        };
+        reader.readAsText(file);
+    }
+
+    function saveProject() {
+        captureCurrentGrid();
+        const nameInput = document.getElementById('new-project-name').value.trim();
+        if (nameInput) currentProjectName = nameInput;
+        const poolItems = Array.from(document.querySelectorAll('#task-pool .task-card')).map(card => ({
+            name: card.querySelector('.task-text').innerText,
+            color: card.style.backgroundColor
+        }));
+        const projectData = {
+            settings: {
+                date: document.getElementById('start-date').value,
+                start: document.getElementById('start-time').value,
+                end: document.getElementById('end-time').value,
+                interval: document.getElementById('interval').value,
+                days: document.getElementById('days-count').value,
+                cols: document.getElementById('cols-per-day').value
+            },
+            schedule: activeSchedule, 
+            pool: poolItems
+        };
+        localStorage.setItem('planner_v8_' + currentProjectName, JSON.stringify(projectData));
+        let projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        if (!projectList.includes(currentProjectName)) projectList.push(currentProjectName);
+        localStorage.setItem('planner_project_list', JSON.stringify(projectList));
+        localStorage.setItem('planner_last_active', currentProjectName);
+        updateProjectSelector();
+        alert(`「${currentProjectName}」已儲存`);
+    }
+
+    function switchProject() {
+        const sel = document.getElementById('project-selector');
+        if (!sel.value) return;
+        currentProjectName = sel.value;
+        const data = JSON.parse(localStorage.getItem('planner_v8_' + currentProjectName));
+        if (data) {
+            document.getElementById('start-date').value = data.settings.date;
+            document.getElementById('start-time').value = data.settings.start;
+            document.getElementById('end-time').value = data.settings.end;
+            document.getElementById('interval').value = data.settings.interval;
+            document.getElementById('days-count').value = data.settings.days;
+            document.getElementById('cols-per-day').value = data.settings.cols;
+            activeSchedule = data.schedule || {};
+            const pool = document.getElementById('task-pool');
+            pool.innerHTML = "";
+            (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
+            generateGrid();
+        }
+    }
+
+    // --- 修改：增加懸停顯示完整名稱 (title 屬性) ---
     function createTaskElement(name, color) {
         const div = document.createElement('div');
         div.className = 'task-card';
         div.draggable = true;
         div.style.backgroundColor = color;
+        // 滑鼠懸停時顯示全名的核心：設定 title
+        div.title = name; 
         
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        const ci = document.createElement('input');
+        ci.type = 'color'; ci.value = rgbToHex(color);
+        ci.oninput = (e) => { div.style.backgroundColor = e.target.value; captureCurrentGrid(); };
+        ci.onmousedown = (e) => e.stopPropagation();
+        dot.appendChild(ci);
+        div.appendChild(dot);
+
         const text = document.createElement('span');
         text.className = 'task-text'; 
         text.innerText = name;
+        text.contentEditable = "false";
+
+        text.ondblclick = (e) => {
+            text.contentEditable = "true";
+            div.draggable = false;
+            text.focus();
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        };
+
+        text.onblur = () => {
+            text.contentEditable = "false";
+            div.draggable = true;
+            // 當文字被編輯後，同步更新 title 提示
+            div.title = text.innerText;
+            captureCurrentGrid(); 
+        };
+
+        text.onkeydown = (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); text.blur(); }
+        };
+
         div.appendChild(text);
+
+        const del = document.createElement('span');
+        del.className = 'delete-btn'; del.innerHTML = '×';
+        del.onclick = (e) => { 
+            e.stopPropagation(); 
+            const parentCell = div.closest('.grid-cell');
+            if (parentCell) delete activeSchedule[parentCell.dataset.pos];
+            div.remove(); 
+        };
+        div.appendChild(del);
 
         div.addEventListener('dragstart', (e) => {
             draggedItem = div;
-            div.style.opacity = '0.4';
-            if (navigator.vibrate) navigator.vibrate(50); // 震動回饋
+            sourceContainerId = div.parentElement.id;
+            if (!isCopyMode) div.style.opacity = '0.4';
         });
-
-        div.addEventListener('dragend', () => {
-            div.style.opacity = '1';
-        });
-
-        // 點擊兩下刪除（手機上比 X 按鈕好點）
-        div.addEventListener('dblclick', () => div.remove());
-
+        div.addEventListener('dragend', () => { div.style.opacity = '1'; draggedItem = null; });
         return div;
-    }
-
-    function generateGrid() {
-        const grid = document.getElementById('calendar-grid');
-        grid.innerHTML = '';
-        grid.style.gridTemplateColumns = `50px repeat(2, 1fr)`; // 手機建議一次看2欄就好
-
-        // 簡易標頭與內容
-        for(let i=0; i<3; i++) grid.appendChild(document.createElement('div')); // filler
-        
-        for (let h = 6; h <= 22; h++) {
-            const label = document.createElement('div');
-            label.className = 'time-label'; label.innerText = `${h}:00`;
-            grid.appendChild(label);
-
-            for (let d = 0; d < 2; d++) {
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell';
-                
-                cell.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    cell.classList.add('drag-over');
-                });
-                cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
-                cell.addEventListener('drop', onDrop);
-                
-                grid.appendChild(cell);
-            }
-        }
     }
 
     function addNewTaskManual() {
         const input = document.getElementById('new-task-name');
-        if (!input.value) return;
-        document.getElementById('task-pool').appendChild(createTaskElement(input.value, '#FFB3BA'));
+        const names = input.value.trim().split(/\s+/);
+        names.forEach(name => {
+            if (name) document.getElementById('task-pool').appendChild(createTaskElement(name, colors[colorCounter++ % 7]));
+        });
         input.value = '';
     }
 
-    window.onload = generateGrid;
+    function generateGrid() {
+        const startDateVal = document.getElementById('start-date').value;
+        const startH = parseInt(document.getElementById('start-time').value);
+        const endH = parseInt(document.getElementById('end-time').value);
+        const interval = parseInt(document.getElementById('interval').value) || 60;
+        const days = parseInt(document.getElementById('days-count').value);
+        const colsPerDay = parseInt(document.getElementById('cols-per-day').value);
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+        grid.style.gridTemplateColumns = `65px repeat(${days * colsPerDay}, minmax(80px, 1fr))`;
+        const weekNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+        const baseDate = new Date(startDateVal);
+        grid.appendChild(createHeaderCell(''));
+        for(let i=0; i<days; i++){
+            const d = new Date(baseDate);
+            d.setDate(baseDate.getDate() + i);
+            const dateStr = d.toISOString().split('T')[0]; 
+            const head = createHeaderCell(`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}<br>${weekNames[d.getDay()]}`, `span ${colsPerDay}`);
+            grid.appendChild(head);
+        }
+        grid.appendChild(createHeaderCell(''));
+        for(let i=0; i<days * colsPerDay; i++) {
+            const sub = document.createElement('div');
+            sub.className = 'grid-header-sub'; sub.innerText = (i % colsPerDay) + 1;
+            grid.appendChild(sub);
+        }
+        const totalMinutes = (endH - startH) * 60;
+        for (let m = 0; m <= totalMinutes; m += interval) {
+            const currentH = startH + Math.floor(m / 60);
+            if (currentH >= endH && m % 60 !== 0) break; 
+            const timeStr = `${currentH.toString().padStart(2, '0')}:${(m % 60).toString().padStart(2, '0')}`;
+            const label = document.createElement('div'); label.className = 'time-label';
+            label.innerHTML = `<span class="time-text">${timeStr}</span>`;
+            grid.appendChild(label);
+            for (let d = 0; d < days; d++) {
+                const targetDate = new Date(baseDate); targetDate.setDate(baseDate.getDate() + d);
+                const dateKey = targetDate.toISOString().split('T')[0];
+                for (let c = 0; c < colsPerDay; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell'; cell.dataset.pos = `${dateKey}_col${c}_${timeStr}`;
+                    cell.ondragover = (e) => { e.preventDefault(); cell.classList.add('drag-over'); };
+                    cell.ondragleave = () => cell.classList.remove('drag-over');
+                    cell.ondrop = (e) => handleDrop(e, cell);
+                    if (activeSchedule[cell.dataset.pos]) cell.appendChild(createTaskElement(activeSchedule[cell.dataset.pos].name, activeSchedule[cell.dataset.pos].color));
+                    grid.appendChild(cell);
+                }
+            }
+        }
+    }
+
+    function handleDrop(e, cell) {
+        e.preventDefault(); cell.classList.remove('drag-over');
+        if (!draggedItem) return;
+        const name = draggedItem.querySelector('.task-text').innerText;
+        const color = draggedItem.style.backgroundColor;
+        activeSchedule[cell.dataset.pos] = { name, color };
+        const newItem = (sourceContainerId === 'task-pool' || isCopyMode) ? createTaskElement(name, color) : draggedItem;
+        cell.innerHTML = ''; cell.appendChild(newItem);
+    }
+
+    function createHeaderCell(html, gridColumn = '') {
+        const div = document.createElement('div'); div.className = 'grid-header-day';
+        div.innerHTML = html; if (gridColumn) div.style.gridColumn = gridColumn;
+        return div;
+    }
+
+    function updateProjectSelector() {
+        const sel = document.getElementById('project-selector');
+        const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        sel.innerHTML = '<option value="">-- 選擇專案 --</option>';
+        list.forEach(name => {
+            const opt = document.createElement('option'); opt.value = name; opt.text = name;
+            if (name === currentProjectName) opt.selected = true;
+            sel.add(opt);
+        });
+    }
+
+    function deleteProject() {
+        if (!confirm(`確定刪除？`)) return;
+        localStorage.removeItem('planner_v8_' + currentProjectName);
+        let list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
+        localStorage.setItem('planner_project_list', JSON.stringify(list.filter(n => n !== currentProjectName)));
+        location.reload(); 
+    }
+
+    function rgbToHex(rgb) {
+        if (!rgb || rgb.startsWith('#')) return rgb || '#ffffff';
+        const res = rgb.match(/\d+/g);
+        return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
+    }
+
+    window.onload = () => {
+        updateProjectSelector();
+        const last = localStorage.getItem('planner_last_active');
+        if (last) { currentProjectName = last; switchProject(); } else { generateGrid(); }
+    };
 </script>
+
 </body>
 </html>
