@@ -44,7 +44,7 @@
     }
 
     .setting-group { display: flex; align-items: center; gap: 3px; }
-    input[type="number"], input[type="date"] { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
+    input[type="number"], input[type="date"], select { padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
     input[type="number"] { width: 50px; }
 
     button.btn {
@@ -162,7 +162,15 @@
 
 <div id="settings-bar">
     <div class="setting-group"><label>起始:</label><input type="date" id="start-date"></div>
-    <div class="setting-group"><label>時段:</label><input type="number" id="start-time" value="6">-<input type="number" id="end-time" value="22"></div>
+
+    <!-- ✅ 時段改成下拉（0-24） -->
+    <div class="setting-group">
+        <label>時段:</label>
+        <select id="start-time"></select>
+        -
+        <select id="end-time"></select>
+    </div>
+
     <div class="setting-group"><label>間隔(分):</label><input type="number" id="interval" value="60" min="1"></div>
     <div class="setting-group"><label>天數:</label><input type="number" id="days-count" value="7"></div>
     <div class="setting-group"><label>欄位:</label><input type="number" id="cols-per-day" value="2"></div>
@@ -211,10 +219,55 @@
     // ✅ 可選：提示（若你覺得太煩可以註解掉）
     function maybeShowLineHint() {
         if (!isLineInApp()) return;
-        // 只提示一次
         if (sessionStorage.getItem('line_hint_shown') === '1') return;
         sessionStorage.setItem('line_hint_shown', '1');
-        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右下(上)角「⋯」→ 在外部瀏覽器開啟。");
+        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
+    }
+
+    // ✅ 0-24 時段下拉初始化 + 防呆（end > start）
+    function populateTimeSelects() {
+        const startSel = document.getElementById('start-time');
+        const endSel = document.getElementById('end-time');
+        if (!startSel || !endSel) return;
+
+        if (startSel.options.length === 0) {
+            for (let h = 0; h <= 24; h++) {
+                const o1 = document.createElement('option');
+                o1.value = String(h);
+                o1.textContent = String(h);
+                startSel.appendChild(o1);
+
+                const o2 = document.createElement('option');
+                o2.value = String(h);
+                o2.textContent = String(h);
+                endSel.appendChild(o2);
+            }
+        }
+
+        // 預設值（沿用原本 6-22）
+        if (!startSel.value) startSel.value = "6";
+        if (!endSel.value) endSel.value = "22";
+
+        function normalize() {
+            const s = parseInt(startSel.value, 10);
+            let e = parseInt(endSel.value, 10);
+            if (e <= s) {
+                e = Math.min(24, s + 1);
+                endSel.value = String(e);
+            }
+        }
+
+        // 只綁一次事件（避免重複 refresh）
+        if (!startSel.dataset.bound) {
+            startSel.dataset.bound = "1";
+            startSel.addEventListener('change', () => { normalize(); refreshTable(); });
+        }
+        if (!endSel.dataset.bound) {
+            endSel.dataset.bound = "1";
+            endSel.addEventListener('change', () => { normalize(); refreshTable(); });
+        }
+
+        normalize();
     }
 
     function refreshTable() { captureCurrentGrid(); generateGrid(); }
@@ -247,7 +300,6 @@
 
         const jsonText = JSON.stringify(exportObj, null, 2);
 
-        // LINE in-app：複製到剪貼簿 / prompt 手動複製
         if (isLineInApp()) {
             const ok = confirm("LINE 內建瀏覽器可能無法下載檔案。\n\n按「確定」將 JSON 複製到剪貼簿（可貼到記事本/雲端硬碟再存成 .json）。");
             if (!ok) return;
@@ -264,7 +316,6 @@
             return;
         }
 
-        // 一般瀏覽器：下載
         const blob = new Blob([jsonText], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -343,6 +394,10 @@
             document.getElementById('interval').value = data.settings.interval;
             document.getElementById('days-count').value = data.settings.days;
             document.getElementById('cols-per-day').value = data.settings.cols;
+
+            // ✅ 套用防呆（end > start）
+            populateTimeSelects();
+
             activeSchedule = data.schedule || {};
 
             const pool = document.getElementById('task-pool');
@@ -432,11 +487,11 @@
 
     function generateGrid() {
         const startDateVal = document.getElementById('start-date').value;
-        const startH = parseInt(document.getElementById('start-time').value);
-        const endH = parseInt(document.getElementById('end-time').value);
-        const interval = parseInt(document.getElementById('interval').value) || 60;
-        const days = parseInt(document.getElementById('days-count').value);
-        const colsPerDay = parseInt(document.getElementById('cols-per-day').value);
+        const startH = parseInt(document.getElementById('start-time').value, 10);
+        const endH = parseInt(document.getElementById('end-time').value, 10);
+        const interval = parseInt(document.getElementById('interval').value, 10) || 60;
+        const days = parseInt(document.getElementById('days-count').value, 10);
+        const colsPerDay = parseInt(document.getElementById('cols-per-day').value, 10);
 
         const grid = document.getElementById('calendar-grid');
         grid.innerHTML = '';
@@ -579,7 +634,6 @@
 
             const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
 
-            // LINE in-app：嘗試系統分享（最順）
             if (isLineInApp()) {
                 try {
                     const file = new File([blob], filename, { type: 'image/png' });
@@ -587,11 +641,8 @@
                         await navigator.share({ files: [file], title: filename });
                         return;
                     }
-                } catch (_) {
-                    // ignore → fallback below
-                }
+                } catch (_) {}
 
-                // LINE in-app fallback：開新頁顯示圖片，讓使用者長按「儲存圖片」
                 const dataUrl = canvas.toDataURL('image/png');
                 const w = window.open();
                 if (w) {
@@ -604,7 +655,6 @@
                 return;
             }
 
-            // 一般瀏覽器：下載
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -619,6 +669,7 @@
     }
 
     window.onload = () => {
+        populateTimeSelects();
         updateProjectSelector();
         maybeShowLineHint();
 
@@ -629,4 +680,3 @@
 </script>
 </body>
 </html>
-
