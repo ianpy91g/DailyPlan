@@ -186,7 +186,7 @@
     // ✅ mobile drag-drop polyfill
     MobileDragDrop.polyfill({ dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride });
 
-    // ✅ 某些 iOS Safari 版本需要（讓拖曳行為更穩）
+    // ✅ 某些 iOS Safari / in-app browser 需要（讓拖曳行為更穩）
     window.addEventListener('touchmove', function () {}, { passive: false });
 
     let draggedItem = null;
@@ -201,6 +201,21 @@
 
     window.addEventListener('keydown', (e) => { if(e.ctrlKey) isCopyMode = true; });
     window.addEventListener('keyup', (e) => { if(!e.ctrlKey) isCopyMode = false; });
+
+    // ✅ 偵測 LINE 內建瀏覽器
+    function isLineInApp() {
+        const ua = navigator.userAgent || "";
+        return ua.includes("Line/");
+    }
+
+    // ✅ 可選：提示（若你覺得太煩可以註解掉）
+    function maybeShowLineHint() {
+        if (!isLineInApp()) return;
+        // 只提示一次
+        if (sessionStorage.getItem('line_hint_shown') === '1') return;
+        sessionStorage.setItem('line_hint_shown', '1');
+        alert("你正在 LINE 內建瀏覽器中開啟。\n若遇到 JSON/圖片無法下載，建議右上角「⋯」→ 在外部瀏覽器開啟。");
+    }
 
     function refreshTable() { captureCurrentGrid(); generateGrid(); }
 
@@ -217,8 +232,10 @@
         });
     }
 
+    // ✅ JSON 匯出：一般瀏覽器下載；LINE 內建瀏覽器改「複製 JSON」
     function exportData() {
         captureCurrentGrid();
+
         const exportObj = {
             projectList: JSON.parse(localStorage.getItem('planner_project_list') || '[]'),
             projects: {}
@@ -227,12 +244,34 @@
             const data = localStorage.getItem('planner_v8_' + name);
             if (data) exportObj.projects[name] = JSON.parse(data);
         });
-        const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+
+        const jsonText = JSON.stringify(exportObj, null, 2);
+
+        // LINE in-app：複製到剪貼簿 / prompt 手動複製
+        if (isLineInApp()) {
+            const ok = confirm("LINE 內建瀏覽器可能無法下載檔案。\n\n按「確定」將 JSON 複製到剪貼簿（可貼到記事本/雲端硬碟再存成 .json）。");
+            if (!ok) return;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(jsonText).then(() => {
+                    alert("已複製 JSON 到剪貼簿！");
+                }).catch(() => {
+                    window.prompt("剪貼簿權限受限，請手動複製下方 JSON：", jsonText);
+                });
+            } else {
+                window.prompt("此瀏覽器不支援自動複製，請手動複製下方 JSON：", jsonText);
+            }
+            return;
+        }
+
+        // 一般瀏覽器：下載
+        const blob = new Blob([jsonText], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `planner_backup_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
+        URL.revokeObjectURL(url);
     }
 
     function importData() { document.getElementById('import-file').click(); }
@@ -506,8 +545,10 @@
         return res ? "#" + ((1 << 24) + (parseInt(res[0]) << 16) + (parseInt(res[1]) << 8) + parseInt(res[2])).toString(16).slice(1) : "#ffffff";
     }
 
-    // ✅ 匯出「整張」時間表成單張 PNG（不只可視區）
-    function exportScheduleImage() {
+    // ✅ 匯出「整張」時間表成單張 PNG：
+    // - 一般瀏覽器：直接下載
+    // - LINE 內建瀏覽器：優先 Web Share；不行就開新頁顯示圖片讓使用者長按存圖
+    async function exportScheduleImage() {
         captureCurrentGrid();
 
         const editing = document.querySelector('.task-text[contenteditable="true"]');
@@ -519,31 +560,68 @@
         const exportWidth = grid.scrollWidth;
         const exportHeight = grid.scrollHeight;
 
-        html2canvas(grid, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            useCORS: true,
-            width: exportWidth,
-            height: exportHeight,
-            windowWidth: exportWidth,
-            windowHeight: exportHeight,
-            scrollX: 0,
-            scrollY: 0
-        }).then(canvas => {
-            const link = document.createElement('a');
+        try {
+            const canvas = await html2canvas(grid, {
+                backgroundColor: '#ffffff',
+                scale: 2,
+                useCORS: true,
+                width: exportWidth,
+                height: exportHeight,
+                windowWidth: exportWidth,
+                windowHeight: exportHeight,
+                scrollX: 0,
+                scrollY: 0
+            });
+
             const date = new Date().toISOString().split('T')[0];
             const name = (currentProjectName || 'schedule').replace(/[\\/:*?"<>|]/g, '_');
-            link.download = `${name}_${date}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }).catch(err => {
+            const filename = `${name}_${date}.png`;
+
+            const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+
+            // LINE in-app：嘗試系統分享（最順）
+            if (isLineInApp()) {
+                try {
+                    const file = new File([blob], filename, { type: 'image/png' });
+                    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+                        await navigator.share({ files: [file], title: filename });
+                        return;
+                    }
+                } catch (_) {
+                    // ignore → fallback below
+                }
+
+                // LINE in-app fallback：開新頁顯示圖片，讓使用者長按「儲存圖片」
+                const dataUrl = canvas.toDataURL('image/png');
+                const w = window.open();
+                if (w) {
+                    w.document.write(`<title>${filename}</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><img src="${dataUrl}" style="max-width:100%;height:auto;">`);
+                    w.document.close();
+                    alert("已開新頁顯示圖片。\n請長按圖片→儲存圖片。");
+                } else {
+                    alert("LINE 內建瀏覽器可能阻擋開新頁。\n請用右上角「⋯」→ 在外部瀏覽器開啟後再匯出圖片。");
+                }
+                return;
+            }
+
+            // 一般瀏覽器：下載
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+
+        } catch (err) {
             console.error(err);
             alert('匯出圖片失敗，請開啟瀏覽器 Console 查看錯誤訊息。');
-        });
+        }
     }
 
     window.onload = () => {
         updateProjectSelector();
+        maybeShowLineHint();
+
         const last = localStorage.getItem('planner_last_active');
         if (last) { currentProjectName = last; switchProject(); }
         else { generateGrid(); }
