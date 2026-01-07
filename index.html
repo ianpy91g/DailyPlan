@@ -149,10 +149,10 @@
 
 <body>
 <div id="project-bar">
-    <span>專案:</span>
+    <span>規畫:</span>
     <select id="project-selector" onchange="switchProject()"></select>
     <input type="text" id="new-project-name" placeholder="新名稱">
-    <button class="btn btn-green" onclick="saveProject()">儲存專案</button>
+    <button class="btn btn-green" onclick="saveProject()">儲存規畫</button>
     <button class="btn btn-orange" onclick="exportData()">導出 JSON</button>
     <button class="btn btn-orange" onclick="importData()">導入 JSON</button>
     <button class="btn btn-orange" onclick="exportScheduleImage()">匯出圖片</button>
@@ -219,7 +219,7 @@
     let draggedItem = null;
     let sourceContainerId = null;
     let isCopyMode = false;
-    let currentProjectName = "預設專案";
+    let currentProjectName = "預設規畫";
     let activeSchedule = {};
     const colors = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF', '#D1BAFF', '#FFBAF2'];
     let colorCounter = 0;
@@ -436,7 +436,7 @@
             try {
                 const imported = JSON.parse(e.target.result);
                 if (imported.projectList && imported.projects) {
-                    if (confirm("導入將合併現有專案，確定嗎？")) {
+                    if (confirm("導入將合併現有規畫，確定嗎？")) {
                         let currentList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
                         imported.projectList.forEach(name => {
                             if (!currentList.includes(name)) currentList.push(name);
@@ -508,7 +508,7 @@
         (data.pool || []).forEach(item => pool.appendChild(createTaskElement(item.name, item.color)));
         generateGrid();
 
-        // ✅ 專案切換後，如果是符合版面狀態就套用
+        // ✅ 規畫切換後，如果是符合版面狀態就套用
         if (fitMode) applyFitSchedule();
     }
 
@@ -545,7 +545,7 @@
     function updateProjectSelector() {
         const sel = document.getElementById('project-selector');
         const list = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
-        sel.innerHTML = '<option value="">-- 選擇專案 --</option>';
+        sel.innerHTML = '<option value="">-- 選擇規畫 --</option>';
         list.forEach(name => {
             const opt = document.createElement('option'); opt.value = name; opt.text = name;
             if (name === currentProjectName) opt.selected = true;
@@ -866,7 +866,7 @@
         const pool = document.getElementById('task-pool');
         if (!pool) return;
 
-        // 若已經有項目或已有任何專案資料，就不塞示例
+        // 若已經有項目或已有任何規畫資料，就不塞示例
         const hasAnyPool = pool.querySelector('.task-card');
         const projectList = JSON.parse(localStorage.getItem('planner_project_list') || '[]');
         const hasAnyProjectData = projectList.some(name => localStorage.getItem('planner_v8_' + name));
@@ -920,7 +920,7 @@
             currentProjectName = last;
             switchProject();
         } else {
-            // ✅ 沒有專案時，先塞示例事項
+            // ✅ 沒有規畫時，先塞示例事項
             addDefaultExampleTasksIfEmpty();
             generateGrid();
         }
@@ -928,6 +928,7 @@
 </script>
 </body>
 </html>
+
 
 
 
